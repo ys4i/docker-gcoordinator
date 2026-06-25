@@ -34,7 +34,7 @@ else
   export XAUTHORITY_PATH=/dev/null
 fi
 
-COMPOSE_FILES=(-f docker-compose.yml)
+COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.linux.yml)
 GPU_COMPOSE_FILE=""
 
 cleanup_gpu_compose_file() {

@@ -6,9 +6,9 @@ services:
         GCOORDINATOR_REPO: ${GCOORDINATOR_REPO:-https://github.com/tomohiron907/G-coordinator.git}
     image: docker-gcoordinator:latest
     environment:
-      DISPLAY: ${DISPLAY}
+      DISPLAY: ${DISPLAY:-}
       QT_X11_NO_MITSHM: "1"
-      LIBGL_ALWAYS_SOFTWARE: "0"
+      LIBGL_ALWAYS_SOFTWARE: "1"
       QT_XCB_GL_INTEGRATION: xcb_glx
       PYTHONDONTWRITEBYTECODE: "1"
       XDG_RUNTIME_DIR: /tmp/runtime-gcoordinator
@@ -19,8 +19,6 @@ services:
       && chmod 700 "$$XDG_RUNTIME_DIR"
       && exec python3 main.py'
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ${XAUTHORITY_PATH:-/dev/null}:/tmp/.Xauthority:ro
       - ./workspace:/workspace
     stdin_open: true
     tty: true

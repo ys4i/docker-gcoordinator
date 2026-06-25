@@ -2,12 +2,13 @@
 
 G-coordinator GUI 版を Docker コンテナ内で起動するための構成です。
 
-Phase 1 では、Linux ホスト上で X11 転送を使って GUI を表示します。
+Linux と Windows のホストから Docker Compose で起動できます。
 
 ## 必要なもの
 
 - Docker Engine と Docker Compose
-- X11 または XWayland が使える Linux デスクトップ環境
+- Linux の場合: X11 または XWayland が使えるデスクトップ環境
+- Windows の場合: Docker Desktop と VcXsrv/X410、または WSL2 + WSLg
 
 ## ビルド
 
@@ -49,7 +50,8 @@ xhost +local:docker
 G-coordinator を起動します。
 
 ```bash
-UID=$(id -u) GID=$(id -g) docker compose run --rm gcoordinator
+UID=$(id -u) GID=$(id -g) XAUTHORITY_PATH=${XAUTHORITY:-$HOME/.Xauthority} \
+  docker compose -f docker-compose.yml -f docker-compose.linux.yml run --rm gcoordinator
 ```
 
 ホスト側の `./workspace` は、コンテナ内の `/workspace` にマウントされます。
@@ -63,6 +65,96 @@ G-code や作業ファイルの受け渡しに使えます。
 xhost -local:docker
 ```
 
+## Windows での起動
+
+Windows では Docker Desktop の Linux コンテナを使います。
+GUI 表示には VcXsrv または X410 などの Windows X server が必要です。
+
+### VcXsrv の起動例
+
+VcXsrv の XLaunch で以下を選びます。
+
+- `Multiple windows`
+- `Start no client`
+- `Disable access control`
+
+環境によっては `Native opengl` を無効にした方が安定します。
+
+### PowerShell から起動
+
+先に VcXsrv または X410 を起動してから、PowerShell で実行します。
+
+```powershell
+.\run-windows.ps1
+```
+
+デバッグ用に一時的なログが必要な場合:
+
+```powershell
+New-Item -ItemType Directory -Force -Path log | Out-Null
+.\run-windows.ps1 2>&1 | Tee-Object -FilePath "log\run-windows-$(Get-Date -Format yyyyMMdd-HHmmss).log"
+```
+
+手動で起動する場合:
+
+```powershell
+$env:DISPLAY = "host.docker.internal:0.0"
+$env:UID = "1000"
+$env:GID = "1000"
+docker compose -f docker-compose.yml -f docker-compose.windows.yml run --rm gcoordinator
+```
+
+Windows では `/dev/dri` を使った GPU/DRI デバイス渡しは行いません。
+`docker-compose.windows.yml` では `LIBGL_ALWAYS_SOFTWARE=1` を設定し、ソフトウェアレンダリングを使います。
+
+## Windows WSLg での起動
+
+Windows で GPU を使った描画を狙う場合は、VcXsrv ではなく WSLg 経由で起動します。
+この手順は Windows PowerShell ではなく、WSL2 の Ubuntu などのシェル内で実行します。
+
+### 前提
+
+- Windows 11、または WSLg 対応の Windows 10
+- WSL2 distro
+- WSLg が有効
+- GPU vendor の WSL 対応ドライバ
+- Docker Desktop の WSL integration、または WSL 内の Docker Engine
+
+WSL 側で以下が存在することを確認します。
+
+```bash
+test -d /mnt/wslg && echo ok
+test -e /dev/dxg && echo ok
+test -d /usr/lib/wsl/lib && echo ok
+```
+
+### 起動
+
+WSL のシェルで実行します。
+
+```bash
+./run-wslg.sh
+```
+
+デバッグ用に一時的なログが必要な場合:
+
+```bash
+mkdir -p log
+./run-wslg.sh 2>&1 | tee "log/run-wslg-$(date +%Y%m%d-%H%M%S).log"
+```
+
+WSLg 方式では以下をコンテナへ渡します。
+
+- `/mnt/wslg`
+- `/dev/dxg`
+- `/usr/lib/wsl`
+- `DISPLAY`
+- `WAYLAND_DISPLAY`
+- `XDG_RUNTIME_DIR`
+- `PULSE_SERVER`
+
+`docker-compose.wslg.yml` では `LIBGL_ALWAYS_SOFTWARE=0` を設定し、WSLg の vGPU を使う構成にしています。
+
 ## 補足
 
 - Docker イメージは `ubuntu:22.04` をベースにしています。
@@ -71,4 +163,6 @@ xhost -local:docker
 - ホストの X11 認証ファイルがある場合は、起動スクリプトが `.Xauthority` をコンテナへ読み取り専用で渡します。
 - 軽量化のため `LIBGL_ALWAYS_SOFTWARE=0` を設定し、`/dev/dri` がある Linux ホストでは起動スクリプトが GPU/DRI デバイスをコンテナへ渡します。
 - `/dev/dri` がない環境では、GPU/DRI デバイスの受け渡しは行われません。
-- Windows/macOS 対応は後続 Phase で追加予定です。
+- Windows では X server 側の設定により GUI が表示されない場合があります。まず VcXsrv の `Disable access control` を確認してください。
+- Windows で GPU 描画を使いたい場合は、PowerShell + VcXsrv ではなく WSLg 方式を使ってください。
+- パスに日本語や空白が含まれる場所では、Docker Desktop の volume mount が不安定になる場合があります。

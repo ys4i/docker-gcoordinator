@@ -1,0 +1,9 @@
+services:
+  gcoordinator:
+    environment:
+      DISPLAY: ${DISPLAY}
+      LIBGL_ALWAYS_SOFTWARE: "0"
+      QT_XCB_GL_INTEGRATION: xcb_glx
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY_PATH:-/dev/null}:/tmp/.Xauthority:ro
