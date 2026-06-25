@@ -12,7 +12,7 @@ fi
 COMPOSE_CMD=()
 if docker compose version >/dev/null 2>&1; then
   COMPOSE_CMD=(docker compose)
-elif command -v docker-compose >/dev/null 2>&1; then
+elif docker-compose version >/dev/null 2>&1; then
   COMPOSE_CMD=(docker-compose)
 else
   echo "Docker Compose is not available inside WSL." >&2
