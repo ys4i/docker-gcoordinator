@@ -35,11 +35,50 @@ function Install-WingetPackage {
     winget install --id $Id --exact --silent --accept-package-agreements --accept-source-agreements
 }
 
+function Add-PathIfExists {
+    param([string]$Path)
+
+    if ((Test-Path $Path) -and ($env:Path -notlike "*$Path*")) {
+        $env:Path = "$Path;$env:Path"
+    }
+}
+
+function Refresh-ToolPath {
+    Add-PathIfExists -Path (Join-Path $env:ProgramFiles "Docker\Docker\resources\bin")
+    Add-PathIfExists -Path (Join-Path $env:ProgramFiles "Docker\Docker")
+    Add-PathIfExists -Path (Join-Path $env:ProgramFiles "VcXsrv")
+}
+
+function Invoke-NativeQuiet {
+    param(
+        [string]$Command,
+        [string[]]$Arguments = @()
+    )
+
+    try {
+        $PreviousNativePreference = $null
+        if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue) {
+            $PreviousNativePreference = $global:PSNativeCommandUseErrorActionPreference
+            $global:PSNativeCommandUseErrorActionPreference = $false
+        }
+
+        & $Command @Arguments > $null 2> $null
+        return $LASTEXITCODE
+    }
+    catch {
+        return 1
+    }
+    finally {
+        if ($null -ne $PreviousNativePreference) {
+            $global:PSNativeCommandUseErrorActionPreference = $PreviousNativePreference
+        }
+    }
+}
+
 function Wait-DockerReady {
     Write-Host "Waiting for Docker daemon..."
     for ($i = 0; $i -lt 60; $i++) {
-        docker info *> $null
-        if ($LASTEXITCODE -eq 0) {
+        if ((Invoke-NativeQuiet -Command "docker" -Arguments @("info")) -eq 0) {
             Write-Host "Docker daemon is ready."
             return
         }
@@ -51,19 +90,18 @@ function Wait-DockerReady {
 function Ensure-DockerDesktop {
     if (-not (Test-Command docker)) {
         Install-WingetPackage -Id "Docker.DockerDesktop" -Name "Docker Desktop"
+        Refresh-ToolPath
     }
 
     if (-not (Test-Command docker)) {
-        throw "docker command not found. Restart PowerShell after installing Docker Desktop."
+        throw "docker command not found after installing Docker Desktop. Restart PowerShell, then re-run this script."
     }
 
-    docker compose version *> $null
-    if ($LASTEXITCODE -ne 0) {
+    if ((Invoke-NativeQuiet -Command "docker" -Arguments @("compose", "version")) -ne 0) {
         throw "docker compose is not available. Check Docker Desktop installation."
     }
 
-    docker info *> $null
-    if ($LASTEXITCODE -ne 0) {
+    if ((Invoke-NativeQuiet -Command "docker" -Arguments @("info")) -ne 0) {
         $DockerDesktop = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
         if (Test-Path $DockerDesktop) {
             Write-Host "Starting Docker Desktop..."
@@ -79,6 +117,7 @@ function Ensure-VcXsrv {
 
     if (-not (Test-Path $VcXsrv)) {
         Install-WingetPackage -Id "marha.VcXsrv" -Name "VcXsrv"
+        Refresh-ToolPath
     }
 
     if (-not (Test-Path $VcXsrv)) {
