@@ -87,6 +87,19 @@ function Wait-DockerReady {
     throw "Docker daemon did not become ready. Start Docker Desktop and re-run this script."
 }
 
+function Invoke-RequiredNative {
+    param(
+        [string]$Command,
+        [string[]]$Arguments = @(),
+        [string]$ErrorMessage
+    )
+
+    & $Command @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw $ErrorMessage
+    }
+}
+
 function Ensure-DockerDesktop {
     if (-not (Test-Command docker)) {
         Install-WingetPackage -Id "Docker.DockerDesktop" -Name "Docker Desktop"
@@ -173,7 +186,10 @@ if ($Mode -eq "VcXsrv") {
     $env:GID = "1000"
 
     if (-not $NoBuild) {
-        docker compose -f docker-compose.yml -f docker-compose.windows.yml build
+        Invoke-RequiredNative `
+            -Command "docker" `
+            -Arguments @("compose", "-f", "docker-compose.yml", "-f", "docker-compose.windows.yml", "build") `
+            -ErrorMessage "Docker image build failed. Fix the build error above, then re-run this script."
     }
 
     Write-Host "Windows VcXsrv setup completed."
@@ -189,7 +205,10 @@ else {
     $WslRepoPath = Get-WSLRepoPath
 
     if (-not $NoBuild) {
-        wsl --exec sh -lc "cd '$WslRepoPath' && docker compose -f docker-compose.yml -f docker-compose.wslg.yml build"
+        Invoke-RequiredNative `
+            -Command "wsl" `
+            -Arguments @("--exec", "sh", "-lc", "cd '$WslRepoPath' && docker compose -f docker-compose.yml -f docker-compose.wslg.yml build") `
+            -ErrorMessage "WSLg Docker image build failed. Fix the build error above, then re-run this script."
     }
 
     Write-Host "Windows WSLg setup checks completed."

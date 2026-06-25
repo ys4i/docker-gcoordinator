@@ -9,7 +9,7 @@ ENV QT_X11_NO_MITSHM=1
 ENV LIBGL_ALWAYS_SOFTWARE=1
 ENV XDG_RUNTIME_DIR=/tmp/runtime-root
 
-RUN apt-get update \
+RUN apt-get -o Acquire::Check-Date=false update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         git \
