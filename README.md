@@ -78,6 +78,19 @@ PowerShell で以下を実行します。
 .\setup-windows.ps1 -Mode VcXsrv
 ```
 
+PowerShell の実行ポリシーで `.ps1` の実行が止まる場合は、現在の PowerShell プロセスだけ一時的に許可します。
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\setup-windows.ps1 -Mode VcXsrv
+```
+
+ポリシーを変更せずに1回だけ実行する場合:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1 -Mode VcXsrv
+```
+
 セットアップ後にそのまま起動する場合:
 
 ```powershell
@@ -139,6 +152,12 @@ PowerShell から前提確認とビルドを行う場合:
 
 ```powershell
 .\setup-windows.ps1 -Mode WSLg
+```
+
+PowerShell の実行ポリシーで止まる場合:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1 -Mode WSLg
 ```
 
 WSL 内でセットアップする場合:
