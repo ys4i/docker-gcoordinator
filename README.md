@@ -116,10 +116,16 @@ VcXsrv の XLaunch で以下を選びます。
 
 ### PowerShell から起動
 
-先に VcXsrv または X410 を起動してから、PowerShell で実行します。
+PowerShell から WSLg 方式で起動する場合:
 
 ```powershell
 .\run-windows.ps1
+```
+
+VcXsrv または X410 方式で起動する場合は、先に VcXsrv/X410 を起動してから以下を実行します。
+
+```powershell
+.\run-windows.ps1 -Mode VcXsrv
 ```
 
 デバッグ用に一時的なログが必要な場合:
