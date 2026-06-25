@@ -1,0 +1,23 @@
+ Container docker-gcoordinator-gcoordinator-run-3c7d8096b0bc Creating 
+ Container docker-gcoordinator-gcoordinator-run-3c7d8096b0bc Created 
+Traceback (most recent call last):
+  File "/opt/G-coordinator/src/main.py", line 26, in <module>
+    from window.main_window   import main_window, app
+  File "/opt/G-coordinator/src/window/main_window.py", line 13, in <module>
+    from window.draw_object             import draw_full_object, draw_object_slider, grid_draw
+  File "/opt/G-coordinator/src/window/draw_object.py", line 6, in <module>
+    import pyqtgraph.opengl as gl
+  File "/usr/local/lib/python3.10/dist-packages/pyqtgraph/opengl/__init__.py", line 1, in <module>
+    from . import shaders
+  File "/usr/local/lib/python3.10/dist-packages/pyqtgraph/opengl/shaders.py", line 1, in <module>
+    from OpenGL.GL import *  # noqa
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/GL/__init__.py", line 4, in <module>
+    from OpenGL.GL.VERSION.GL_1_1 import *
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/GL/VERSION/GL_1_1.py", line 14, in <module>
+    from OpenGL.raw.GL.VERSION.GL_1_1 import *
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/raw/GL/VERSION/GL_1_1.py", line 7, in <module>
+    from OpenGL.raw.GL import _errors
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/raw/GL/_errors.py", line 4, in <module>
+    _error_checker = _ErrorChecker( _p, _p.GL.glGetError )
+AttributeError: 'NoneType' object has no attribute 'glGetError'
+

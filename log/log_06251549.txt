@@ -1,0 +1,48 @@
+❯ ./run-linux.sh
+Container docker-gcoordinator-gcoordinator-run-f2ccc83f1c26 Creating 
+Container docker-gcoordinator-gcoordinator-run-f2ccc83f1c26 Created 
+Traceback (most recent call last):
+  File "/opt/G-coordinator/src/window/main_window.py", line 143, in closeEvent
+    with open('buffer/G-coordinator.gcode', 'w') as file:
+PermissionError: [Errno 13] Permission denied: 'buffer/G-coordinator.gcode'
+❯ ./run-linux.sh
+Container docker-gcoordinator-gcoordinator-run-e2cede0346fe Creating 
+Container docker-gcoordinator-gcoordinator-run-e2cede0346fe Created 
+Traceback (most recent call last):
+  File "/opt/G-coordinator/src/window/main/file_operations.py", line 60, in _save_to_path
+    with open(path, 'w') as f:
+PermissionError: [Errno 13] Permission denied: '/opt/G-coordinator/examples/gyroid_infill.py'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/G-coordinator/src/window/main_window.py", line 183, in run
+    self.file_save()
+  File "/opt/G-coordinator/src/window/main_window.py", line 157, in file_save
+    self.file_operation.save(self)
+  File "/opt/G-coordinator/src/window/main/file_operations.py", line 37, in save
+    self._save_to_path(main_window, main_window.path)
+  File "/opt/G-coordinator/src/window/main/file_operations.py", line 67, in _save_to_path
+    main_window.dialog_critical(str(e))
+AttributeError: 'MainWindow' object has no attribute 'dialog_critical'
+Traceback (most recent call last):
+  File "/opt/G-coordinator/src/window/main/file_operations.py", line 60, in _save_to_path
+    with open(path, 'w') as f:
+PermissionError: [Errno 13] Permission denied: '/opt/G-coordinator/examples/gyroid_infill.py'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/G-coordinator/src/window/main_window.py", line 183, in run
+    self.file_save()
+  File "/opt/G-coordinator/src/window/main_window.py", line 157, in file_save
+    self.file_operation.save(self)
+  File "/opt/G-coordinator/src/window/main/file_operations.py", line 37, in save
+    self._save_to_path(main_window, main_window.path)
+  File "/opt/G-coordinator/src/window/main/file_operations.py", line 67, in _save_to_path
+    main_window.dialog_critical(str(e))
+AttributeError: 'MainWindow' object has no attribute 'dialog_critical'
+Traceback (most recent call last):
+  File "/opt/G-coordinator/src/window/main_window.py", line 143, in closeEvent
+    with open('buffer/G-coordinator.gcode', 'w') as file:
+PermissionError: [Errno 13] Permission denied: 'buffer/G-coordinator.gcode'
