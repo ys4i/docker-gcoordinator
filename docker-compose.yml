@@ -8,7 +8,8 @@ services:
     environment:
       DISPLAY: ${DISPLAY}
       QT_X11_NO_MITSHM: "1"
-      LIBGL_ALWAYS_SOFTWARE: "1"
+      LIBGL_ALWAYS_SOFTWARE: "0"
+      QT_XCB_GL_INTEGRATION: xcb_glx
       PYTHONDONTWRITEBYTECODE: "1"
       XDG_RUNTIME_DIR: /tmp/runtime-gcoordinator
       HOME: /tmp

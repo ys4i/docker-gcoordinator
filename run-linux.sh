@@ -34,6 +34,42 @@ else
   export XAUTHORITY_PATH=/dev/null
 fi
 
+COMPOSE_FILES=(-f docker-compose.yml)
+GPU_COMPOSE_FILE=""
+
+cleanup_gpu_compose_file() {
+  if [[ -n "${GPU_COMPOSE_FILE:-}" && -f "$GPU_COMPOSE_FILE" ]]; then
+    rm -f "$GPU_COMPOSE_FILE"
+  fi
+}
+trap cleanup_gpu_compose_file EXIT
+
+if [[ -d /dev/dri ]]; then
+  GPU_COMPOSE_FILE="$(mktemp /tmp/docker-gcoordinator-gpu.XXXXXX.yml)"
+  {
+    printf '%s\n' 'services:'
+    printf '%s\n' '  gcoordinator:'
+    printf '%s\n' '    devices:'
+    printf '%s\n' '      - /dev/dri:/dev/dri'
+
+    mapfile -t DRI_GROUP_IDS < <(
+      find /dev/dri -mindepth 1 -maxdepth 1 -printf '%G\n' 2>/dev/null | sort -n | uniq
+    )
+
+    if (( ${#DRI_GROUP_IDS[@]} > 0 )); then
+      printf '%s\n' '    group_add:'
+      for group_id in "${DRI_GROUP_IDS[@]}"; do
+        printf '      - "%s"\n' "$group_id"
+      done
+    fi
+  } > "$GPU_COMPOSE_FILE"
+
+  COMPOSE_FILES+=(-f "$GPU_COMPOSE_FILE")
+  echo "GPU/DRI enabled: /dev/dri will be passed to the container."
+else
+  echo "GPU/DRI disabled: /dev/dri was not found. Falling back to X11 GLX without device passthrough." >&2
+fi
+
 if command -v xhost >/dev/null 2>&1; then
   XHOST_LOCALUSER_GRANTED=0
   XHOST_DOCKER_GRANTED=0
@@ -58,6 +94,8 @@ else
 fi
 
 cleanup() {
+  cleanup_gpu_compose_file
+
   if [[ "${XHOST_GRANTED:-0}" == "1" ]] && command -v xhost >/dev/null 2>&1; then
     if [[ "${XHOST_LOCALUSER_GRANTED:-0}" == "1" ]]; then
       xhost -SI:localuser:"$(id -un)" >/dev/null || true
@@ -69,4 +107,4 @@ cleanup() {
 }
 trap cleanup EXIT
 
-env UID="$(id -u)" GID="$(id -g)" docker compose run --rm gcoordinator
+env UID="$(id -u)" GID="$(id -g)" docker compose "${COMPOSE_FILES[@]}" run --rm gcoordinator

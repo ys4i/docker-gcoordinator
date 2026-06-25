@@ -69,5 +69,6 @@ xhost -local:docker
 - G-coordinator はビルド時に upstream repository から clone されます。
 - コンテナ内ではホストユーザーの UID/GID でアプリケーションを実行します。
 - ホストの X11 認証ファイルがある場合は、起動スクリプトが `.Xauthority` をコンテナへ読み取り専用で渡します。
-- GUI 表示を安定させるため、`QT_X11_NO_MITSHM=1` と `LIBGL_ALWAYS_SOFTWARE=1` を設定しています。
+- 軽量化のため `LIBGL_ALWAYS_SOFTWARE=0` を設定し、`/dev/dri` がある Linux ホストでは起動スクリプトが GPU/DRI デバイスをコンテナへ渡します。
+- `/dev/dri` がない環境では、GPU/DRI デバイスの受け渡しは行われません。
 - Windows/macOS 対応は後続 Phase で追加予定です。
