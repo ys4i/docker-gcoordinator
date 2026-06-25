@@ -70,6 +70,27 @@ xhost -local:docker
 Windows では Docker Desktop の Linux コンテナを使います。
 GUI 表示には VcXsrv または X410 などの Windows X server が必要です。
 
+### 自動セットアップ
+
+PowerShell で以下を実行します。
+
+```powershell
+.\setup-windows.ps1 -Mode VcXsrv
+```
+
+セットアップ後にそのまま起動する場合:
+
+```powershell
+.\setup-windows.ps1 -Mode VcXsrv -Launch
+```
+
+`winget` が使える環境では Docker Desktop と VcXsrv の導入を試みます。
+インストールを行わず確認とビルドだけ行う場合:
+
+```powershell
+.\setup-windows.ps1 -Mode VcXsrv -SkipInstall
+```
+
 ### VcXsrv の起動例
 
 VcXsrv の XLaunch で以下を選びます。
@@ -111,6 +132,26 @@ Windows では `/dev/dri` を使った GPU/DRI デバイス渡しは行いませ
 
 Windows で GPU を使った描画を狙う場合は、VcXsrv ではなく WSLg 経由で起動します。
 この手順は Windows PowerShell ではなく、WSL2 の Ubuntu などのシェル内で実行します。
+
+### 自動セットアップ
+
+PowerShell から前提確認とビルドを行う場合:
+
+```powershell
+.\setup-windows.ps1 -Mode WSLg
+```
+
+WSL 内でセットアップする場合:
+
+```bash
+./setup-wslg.sh
+```
+
+その後に起動します。
+
+```bash
+./run-wslg.sh
+```
 
 ### 前提
 
