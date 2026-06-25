@@ -43,7 +43,7 @@ if ($Mode -eq "WSLg") {
         "--exec",
         "bash",
         "-lc",
-        "cd '$WslRepoPath' && ./run-wslg.sh"
+        "cd '$WslRepoPath' && sed -i 's/\r$//' run-wslg.sh setup-wslg.sh 2>/dev/null || true; chmod +x run-wslg.sh setup-wslg.sh 2>/dev/null || true; ./run-wslg.sh"
     )
 }
 else {
