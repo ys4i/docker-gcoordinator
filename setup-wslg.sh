@@ -29,14 +29,20 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! docker compose version >/dev/null 2>&1; then
-  echo "docker compose is not available." >&2
+COMPOSE_CMD=()
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker-compose)
+else
+  echo "Docker Compose is not available inside WSL." >&2
+  echo "Enable Docker Desktop WSL integration for this distro, or install the Docker Compose plugin in WSL." >&2
   exit 1
 fi
 
 mkdir -p workspace log
 
-docker compose -f docker-compose.yml -f docker-compose.wslg.yml build
+"${COMPOSE_CMD[@]}" -f docker-compose.yml -f docker-compose.wslg.yml build
 
 echo "WSLg setup completed."
 echo "Run: ./run-wslg.sh"

@@ -9,8 +9,14 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! docker compose version >/dev/null 2>&1; then
-  echo "docker compose is not available." >&2
+COMPOSE_CMD=()
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker-compose)
+else
+  echo "Docker Compose is not available inside WSL." >&2
+  echo "Enable Docker Desktop WSL integration for this distro, or install the Docker Compose plugin in WSL." >&2
   exit 1
 fi
 
@@ -77,4 +83,4 @@ echo "WSLg enabled: DISPLAY=$DISPLAY WAYLAND_DISPLAY=$WAYLAND_DISPLAY"
 echo "GPU enabled: /dev/dxg will be passed to the container."
 
 env UID="$(id -u)" GID="$(id -g)" \
-  docker compose "${COMPOSE_FILES[@]}" run --rm gcoordinator
+  "${COMPOSE_CMD[@]}" "${COMPOSE_FILES[@]}" run --rm gcoordinator

@@ -207,7 +207,7 @@ else {
     if (-not $NoBuild) {
         Invoke-RequiredNative `
             -Command "wsl" `
-            -Arguments @("--exec", "sh", "-lc", "cd '$WslRepoPath' && docker compose -f docker-compose.yml -f docker-compose.wslg.yml build") `
+            -Arguments @("--exec", "bash", "-lc", "cd '$WslRepoPath' && if docker compose version >/dev/null 2>&1; then docker compose -f docker-compose.yml -f docker-compose.wslg.yml build; elif command -v docker-compose >/dev/null 2>&1; then docker-compose -f docker-compose.yml -f docker-compose.wslg.yml build; else echo 'Docker Compose is not available inside WSL. Enable Docker Desktop WSL integration for this distro, or install the Docker Compose plugin in WSL.' >&2; exit 1; fi") `
             -ErrorMessage "WSLg Docker image build failed. Fix the build error above, then re-run this script."
     }
 
