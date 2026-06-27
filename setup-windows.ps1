@@ -32,17 +32,14 @@ function Write-WaitProgress {
     param(
         [string]$Activity,
         [int]$Attempt,
-        [int]$MaximumAttempts,
-        [int]$IntervalSeconds
+        [int]$MaximumAttempts
     )
 
-    $ElapsedSeconds = $Attempt * $IntervalSeconds
-    $MaximumSeconds = $MaximumAttempts * $IntervalSeconds
     Write-Progress `
         -Id $WaitProgressId `
         -ParentId $SetupProgressId `
         -Activity $Activity `
-        -Status "$ElapsedSeconds / $MaximumSeconds seconds elapsed" `
+        -Status "Attempt $Attempt of $MaximumAttempts" `
         -PercentComplete ([math]::Min(100, [math]::Floor(($Attempt / $MaximumAttempts) * 100)))
 }
 
@@ -110,15 +107,50 @@ function Invoke-NativeQuiet {
     }
 }
 
+function Test-DockerDaemon {
+    param([int]$TimeoutSeconds = 5)
+
+    $StdoutPath = Join-Path ([System.IO.Path]::GetTempPath()) "docker-info-$PID-$([guid]::NewGuid().ToString('N')).out"
+    $StderrPath = Join-Path ([System.IO.Path]::GetTempPath()) "docker-info-$PID-$([guid]::NewGuid().ToString('N')).err"
+    $Process = $null
+
+    try {
+        $Process = Start-Process `
+            -FilePath "docker" `
+            -ArgumentList @("info") `
+            -NoNewWindow `
+            -PassThru `
+            -RedirectStandardOutput $StdoutPath `
+            -RedirectStandardError $StderrPath
+
+        if (-not $Process.WaitForExit($TimeoutSeconds * 1000)) {
+            $Process.Kill()
+            $Process.WaitForExit()
+            return $false
+        }
+
+        return $Process.ExitCode -eq 0
+    }
+    catch {
+        return $false
+    }
+    finally {
+        if ($null -ne $Process) {
+            $Process.Dispose()
+        }
+        Remove-Item -Path $StdoutPath, $StderrPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Wait-DockerReady {
     Write-Host "Waiting for Docker daemon..."
     for ($i = 0; $i -lt 60; $i++) {
-        if ((Invoke-NativeQuiet -Command "docker" -Arguments @("info")) -eq 0) {
+        if (Test-DockerDaemon -TimeoutSeconds 3) {
             Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting for Docker daemon" -Completed
             Write-Host "Docker daemon is ready."
             return
         }
-        Write-WaitProgress -Activity "Waiting for Docker daemon" -Attempt ($i + 1) -MaximumAttempts 60 -IntervalSeconds 2
+        Write-WaitProgress -Activity "Waiting for Docker daemon" -Attempt ($i + 1) -MaximumAttempts 60
         Start-Sleep -Seconds 2
     }
     Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting for Docker daemon" -Completed
@@ -140,6 +172,7 @@ function Invoke-RequiredNative {
 
 function Ensure-DockerDesktop {
     if (-not (Test-Command docker)) {
+        Write-Host "Docker CLI was not found."
         Install-WingetPackage -Id "Docker.DockerDesktop" -Name "Docker Desktop"
         Refresh-ToolPath
     }
@@ -148,17 +181,24 @@ function Ensure-DockerDesktop {
         throw "docker command not found after installing Docker Desktop. Restart PowerShell, then re-run this script."
     }
 
+    Write-Host "Checking Docker Compose..."
     if ((Invoke-NativeQuiet -Command "docker" -Arguments @("compose", "version")) -ne 0) {
         throw "docker compose is not available. Check Docker Desktop installation."
     }
+    Write-Host "Docker Compose is available."
 
-    if ((Invoke-NativeQuiet -Command "docker" -Arguments @("info")) -ne 0) {
+    Write-Host "Checking Docker daemon (timeout: 5 seconds)..."
+    if (-not (Test-DockerDaemon -TimeoutSeconds 5)) {
+        Write-Host "Docker daemon is not responding."
         $DockerDesktop = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
         if (Test-Path $DockerDesktop) {
             Write-Host "Starting Docker Desktop..."
             Start-Process $DockerDesktop | Out-Null
         }
         Wait-DockerReady
+    }
+    else {
+        Write-Host "Docker daemon is ready."
     }
 }
 
@@ -308,7 +348,7 @@ function Ensure-WSLDockerCompose {
             Write-Host "Docker Desktop WSL integration is ready."
             return
         }
-        Write-WaitProgress -Activity "Waiting for Docker Desktop WSL integration" -Attempt ($i + 1) -MaximumAttempts 60 -IntervalSeconds 2
+        Write-WaitProgress -Activity "Waiting for Docker Desktop WSL integration" -Attempt ($i + 1) -MaximumAttempts 60
         Start-Sleep -Seconds 2
     }
 
