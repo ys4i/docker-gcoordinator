@@ -7,6 +7,7 @@ services:
       PULSE_SERVER: ${PULSE_SERVER:-/mnt/wslg/PulseServer}
       LIBGL_ALWAYS_SOFTWARE: "0"
       QT_XCB_GL_INTEGRATION: xcb_glx
+      PYOPENGL_PLATFORM: glx
       LD_LIBRARY_PATH: /usr/lib/wsl/lib:${LD_LIBRARY_PATH:-}
       MESA_D3D12_DEFAULT_ADAPTER_NAME: ${MESA_D3D12_DEFAULT_ADAPTER_NAME:-}
     command: sh -lc 'exec python3 main.py'
