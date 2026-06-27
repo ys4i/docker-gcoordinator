@@ -143,18 +143,21 @@ function Test-DockerDaemon {
 }
 
 function Wait-DockerReady {
-    Write-Host "Waiting for Docker daemon..."
-    for ($i = 0; $i -lt 60; $i++) {
+    $MaximumAttempts = 24
+    Write-Host "Waiting up to 2 minutes for Docker daemon..."
+    for ($i = 0; $i -lt $MaximumAttempts; $i++) {
+        $Attempt = $i + 1
+        Write-Host "[Docker] Checking daemon ($Attempt/$MaximumAttempts)..."
         if (Test-DockerDaemon -TimeoutSeconds 3) {
             Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting for Docker daemon" -Completed
             Write-Host "Docker daemon is ready."
             return
         }
-        Write-WaitProgress -Activity "Waiting for Docker daemon" -Attempt ($i + 1) -MaximumAttempts 60
+        Write-WaitProgress -Activity "Waiting for Docker daemon" -Attempt $Attempt -MaximumAttempts $MaximumAttempts
         Start-Sleep -Seconds 2
     }
     Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting for Docker daemon" -Completed
-    throw "Docker daemon did not become ready. Start Docker Desktop and re-run this script."
+    throw "Docker daemon did not become ready within 2 minutes. Open Docker Desktop and resolve any startup, license agreement, WSL 2, or virtualization error shown there, then re-run this script."
 }
 
 function Invoke-RequiredNative {
