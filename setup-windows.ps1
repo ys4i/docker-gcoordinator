@@ -11,6 +11,41 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ScriptDir
 
+$SetupProgressId = 1
+$WaitProgressId = 2
+
+function Write-SetupProgress {
+    param(
+        [int]$Percent,
+        [string]$Status
+    )
+
+    Write-Progress `
+        -Id $SetupProgressId `
+        -Activity "Windows setup ($Mode)" `
+        -Status $Status `
+        -PercentComplete $Percent
+    Write-Host "[$Percent%] $Status"
+}
+
+function Write-WaitProgress {
+    param(
+        [string]$Activity,
+        [int]$Attempt,
+        [int]$MaximumAttempts,
+        [int]$IntervalSeconds
+    )
+
+    $ElapsedSeconds = $Attempt * $IntervalSeconds
+    $MaximumSeconds = $MaximumAttempts * $IntervalSeconds
+    Write-Progress `
+        -Id $WaitProgressId `
+        -ParentId $SetupProgressId `
+        -Activity $Activity `
+        -Status "$ElapsedSeconds / $MaximumSeconds seconds elapsed" `
+        -PercentComplete ([math]::Min(100, [math]::Floor(($Attempt / $MaximumAttempts) * 100)))
+}
+
 function Test-Command {
     param([string]$Name)
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
@@ -79,11 +114,14 @@ function Wait-DockerReady {
     Write-Host "Waiting for Docker daemon..."
     for ($i = 0; $i -lt 60; $i++) {
         if ((Invoke-NativeQuiet -Command "docker" -Arguments @("info")) -eq 0) {
+            Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting for Docker daemon" -Completed
             Write-Host "Docker daemon is ready."
             return
         }
+        Write-WaitProgress -Activity "Waiting for Docker daemon" -Attempt ($i + 1) -MaximumAttempts 60 -IntervalSeconds 2
         Start-Sleep -Seconds 2
     }
+    Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting for Docker daemon" -Completed
     throw "Docker daemon did not become ready. Start Docker Desktop and re-run this script."
 }
 
@@ -266,12 +304,15 @@ function Ensure-WSLDockerCompose {
 
     for ($i = 0; $i -lt 60; $i++) {
         if (Test-WSLDockerCompose) {
+            Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting for Docker Desktop WSL integration" -Completed
             Write-Host "Docker Desktop WSL integration is ready."
             return
         }
+        Write-WaitProgress -Activity "Waiting for Docker Desktop WSL integration" -Attempt ($i + 1) -MaximumAttempts 60 -IntervalSeconds 2
         Start-Sleep -Seconds 2
     }
 
+    Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting for Docker Desktop WSL integration" -Completed
     throw "Docker Compose is still unavailable inside WSL. Open Docker Desktop Settings > Resources > WSL integration and enable the default distro, then re-run this script."
 }
 
@@ -307,47 +348,72 @@ function Get-WSLRepoPath {
     return $WslPath
 }
 
-New-Item -ItemType Directory -Force -Path "workspace" | Out-Null
-New-Item -ItemType Directory -Force -Path "log" | Out-Null
+try {
+    Write-SetupProgress -Percent 0 -Status "Preparing directories"
+    New-Item -ItemType Directory -Force -Path "workspace" | Out-Null
+    New-Item -ItemType Directory -Force -Path "log" | Out-Null
 
-if ($Mode -eq "VcXsrv") {
+    Write-SetupProgress -Percent 20 -Status "Checking Docker Desktop"
     Ensure-DockerDesktop
-    Ensure-VcXsrv
 
-    $env:DISPLAY = "host.docker.internal:0.0"
-    $env:UID = "1000"
-    $env:GID = "1000"
+    if ($Mode -eq "VcXsrv") {
+        Write-SetupProgress -Percent 40 -Status "Checking VcXsrv"
+        Ensure-VcXsrv
 
-    if (-not $NoBuild) {
-        Invoke-RequiredNative `
-            -Command "docker" `
-            -Arguments @("compose", "-f", "docker-compose.yml", "-f", "docker-compose.windows.yml", "build") `
-            -ErrorMessage "Docker image build failed. Fix the build error above, then re-run this script."
+        Write-SetupProgress -Percent 60 -Status "Configuring the VcXsrv environment"
+        $env:DISPLAY = "host.docker.internal:0.0"
+        $env:UID = "1000"
+        $env:GID = "1000"
+
+        if (-not $NoBuild) {
+            Write-SetupProgress -Percent 70 -Status "Building Docker images (this may take several minutes)"
+            Invoke-RequiredNative `
+                -Command "docker" `
+                -Arguments @("compose", "-f", "docker-compose.yml", "-f", "docker-compose.windows.yml", "build") `
+                -ErrorMessage "Docker image build failed. Fix the build error above, then re-run this script."
+        }
+        else {
+            Write-SetupProgress -Percent 90 -Status "Skipping Docker image build (-NoBuild)"
+        }
+
+        Write-SetupProgress -Percent 100 -Status "Setup completed"
+        Write-Host "Windows VcXsrv setup completed."
+        Write-Host "Run: .\run-windows.ps1"
+
+        if ($Launch) {
+            Write-Host "Launching run-windows.ps1..."
+            .\run-windows.ps1
+        }
     }
+    else {
+        Write-SetupProgress -Percent 40 -Status "Checking WSLg and Docker integration"
+        Ensure-WSLg
 
-    Write-Host "Windows VcXsrv setup completed."
-    Write-Host "Run: .\run-windows.ps1"
+        Write-SetupProgress -Percent 60 -Status "Resolving the repository path in WSL"
+        $WslRepoPath = Get-WSLRepoPath
 
-    if ($Launch) {
-        .\run-windows.ps1
+        if (-not $NoBuild) {
+            Write-SetupProgress -Percent 70 -Status "Building Docker images in WSL (this may take several minutes)"
+            Invoke-RequiredNative `
+                -Command "wsl" `
+                -Arguments @("--exec", "bash", "-lc", "cd '$WslRepoPath' && if docker compose version >/dev/null 2>&1; then docker compose -f docker-compose.yml -f docker-compose.wslg.yml build; elif docker-compose version >/dev/null 2>&1; then docker-compose -f docker-compose.yml -f docker-compose.wslg.yml build; else echo 'Docker Compose is not available inside WSL. Enable Docker Desktop WSL integration for this distro, or install the Docker Compose plugin in WSL.' >&2; exit 1; fi") `
+                -ErrorMessage "WSLg Docker image build failed. Fix the build error above, then re-run this script."
+        }
+        else {
+            Write-SetupProgress -Percent 90 -Status "Skipping Docker image build (-NoBuild)"
+        }
+
+        Write-SetupProgress -Percent 100 -Status "Setup completed"
+        Write-Host "Windows WSLg setup checks completed."
+        Write-Host "Open this repository inside WSL and run: ./run-wslg.sh"
+
+        if ($Launch) {
+            Write-Host "Launching run-wslg.sh..."
+            wsl --exec sh -lc "cd '$WslRepoPath' && ./run-wslg.sh"
+        }
     }
 }
-else {
-    Ensure-DockerDesktop
-    Ensure-WSLg
-    $WslRepoPath = Get-WSLRepoPath
-
-    if (-not $NoBuild) {
-        Invoke-RequiredNative `
-            -Command "wsl" `
-            -Arguments @("--exec", "bash", "-lc", "cd '$WslRepoPath' && if docker compose version >/dev/null 2>&1; then docker compose -f docker-compose.yml -f docker-compose.wslg.yml build; elif docker-compose version >/dev/null 2>&1; then docker-compose -f docker-compose.yml -f docker-compose.wslg.yml build; else echo 'Docker Compose is not available inside WSL. Enable Docker Desktop WSL integration for this distro, or install the Docker Compose plugin in WSL.' >&2; exit 1; fi") `
-            -ErrorMessage "WSLg Docker image build failed. Fix the build error above, then re-run this script."
-    }
-
-    Write-Host "Windows WSLg setup checks completed."
-    Write-Host "Open this repository inside WSL and run: ./run-wslg.sh"
-
-    if ($Launch) {
-        wsl --exec sh -lc "cd '$WslRepoPath' && ./run-wslg.sh"
-    }
+finally {
+    Write-Progress -Id $WaitProgressId -ParentId $SetupProgressId -Activity "Waiting" -Completed
+    Write-Progress -Id $SetupProgressId -Activity "Windows setup ($Mode)" -Completed
 }
