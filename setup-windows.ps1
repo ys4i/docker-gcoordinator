@@ -225,8 +225,15 @@ function Ensure-VcXsrv {
     }
 }
 
+function Get-WslVerboseLines {
+    return @(
+        wsl --list --verbose |
+            ForEach-Object { ($_ -replace "`0", "").TrimEnd() }
+    )
+}
+
 function Get-DefaultWslDistro {
-    $DefaultLine = wsl --list --verbose | Where-Object { $_ -match '^\s*\*' } | Select-Object -First 1
+    $DefaultLine = Get-WslVerboseLines | Where-Object { $_ -match '^\s*\*' } | Select-Object -First 1
     if (-not $DefaultLine) {
         return $null
     }
@@ -273,7 +280,7 @@ function Select-ExistingWslDistro {
 }
 
 function Get-DefaultWslVersion {
-    $DefaultLine = wsl --list --verbose | Where-Object { $_ -match '^\s*\*' } | Select-Object -First 1
+    $DefaultLine = Get-WslVerboseLines | Where-Object { $_ -match '^\s*\*' } | Select-Object -First 1
     if ($DefaultLine -and $DefaultLine -match '\s+([12])\s*$') {
         return [int]$Matches[1]
     }
