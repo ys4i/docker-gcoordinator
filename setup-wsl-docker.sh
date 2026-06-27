@@ -76,15 +76,15 @@ sudo chmod 0440 /etc/sudoers.d/docker-wsl-start
 start_docker
 
 if ! docker info >/dev/null 2>&1; then
-  echo "Refreshing Docker group membership..."
-  if ! sg docker -c 'docker info >/dev/null'; then
+  echo "Verifying Docker Engine with elevated privileges..."
+  if ! sudo docker info >/dev/null; then
     echo "Docker Engine was installed but is not ready." >&2
     exit 1
   fi
 fi
 
 if ! docker compose version >/dev/null 2>&1; then
-  if ! sg docker -c 'docker compose version >/dev/null'; then
+  if ! sudo docker compose version >/dev/null; then
     echo "Docker Compose plugin is not available." >&2
     exit 1
   fi
