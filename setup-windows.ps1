@@ -240,6 +240,74 @@ function Get-DefaultWslDistro {
     return $null
 }
 
+function Get-DefaultWslVersion {
+    $DefaultLine = wsl --list --verbose | Where-Object { $_ -match '^\s*\*' } | Select-Object -First 1
+    if ($DefaultLine -and $DefaultLine -match '\s+([12])\s*$') {
+        return [int]$Matches[1]
+    }
+
+    return $null
+}
+
+function Ensure-WSL2 {
+    if (-not (Test-Command wsl)) {
+        throw "The wsl command is not available. Run 'wsl --install' from an elevated PowerShell window, reboot Windows, then retry."
+    }
+
+    $DefaultDistro = Get-DefaultWslDistro
+    if (-not $DefaultDistro) {
+        if ($SkipInstall) {
+            throw "No default WSL distribution was found. Install a WSL 2 distribution, then retry."
+        }
+
+        Write-Host "No WSL distribution was found. Installing the default WSL 2 distribution..."
+        Invoke-RequiredNative `
+            -Command "wsl" `
+            -Arguments @("--install") `
+            -ErrorMessage "WSL distribution installation failed. Check Windows Update and virtualization settings."
+        throw "WSL distribution installation was started. Reboot Windows if requested, complete the distribution setup, then run this script again."
+    }
+
+    $WslVersion = Get-DefaultWslVersion
+    if ($WslVersion -eq 2) {
+        Write-Host "Default WSL distribution '$DefaultDistro' is using WSL 2."
+        return
+    }
+
+    if ($WslVersion -ne 1) {
+        throw "Could not determine the WSL version for '$DefaultDistro'. Run 'wsl --list --verbose' and verify its VERSION column."
+    }
+
+    if ($SkipInstall) {
+        throw "Default WSL distribution '$DefaultDistro' is using WSL 1. Re-run without -SkipInstall to convert it to WSL 2."
+    }
+
+    Write-Host "Default WSL distribution '$DefaultDistro' is using WSL 1."
+    Write-Host "Updating WSL before conversion..."
+    Invoke-RequiredNative `
+        -Command "wsl" `
+        -Arguments @("--update") `
+        -ErrorMessage "WSL update failed. Run 'wsl --update' from an elevated PowerShell window."
+
+    Write-Host "Setting WSL 2 as the default for new distributions..."
+    Invoke-RequiredNative `
+        -Command "wsl" `
+        -Arguments @("--set-default-version", "2") `
+        -ErrorMessage "Could not set WSL 2 as the default. Enable the Virtual Machine Platform Windows feature and virtualization."
+
+    Write-Host "Converting '$DefaultDistro' to WSL 2. This can take several minutes..."
+    Invoke-RequiredNative `
+        -Command "wsl" `
+        -Arguments @("--set-version", $DefaultDistro, "2") `
+        -ErrorMessage "WSL 2 conversion failed. Back up the distribution and check available disk space and virtualization settings."
+
+    if ((Get-DefaultWslVersion) -ne 2) {
+        throw "WSL conversion completed without an error, but '$DefaultDistro' is not reported as WSL 2."
+    }
+
+    Write-Host "Converted '$DefaultDistro' to WSL 2."
+}
+
 function Set-JsonProperty {
     param(
         [pscustomobject]$Object,
@@ -396,7 +464,10 @@ try {
     New-Item -ItemType Directory -Force -Path "workspace" | Out-Null
     New-Item -ItemType Directory -Force -Path "log" | Out-Null
 
-    Write-SetupProgress -Percent 20 -Status "Checking Docker Desktop"
+    Write-SetupProgress -Percent 10 -Status "Checking WSL 2"
+    Ensure-WSL2
+
+    Write-SetupProgress -Percent 25 -Status "Checking Docker Desktop"
     Ensure-DockerDesktop
 
     if ($Mode -eq "VcXsrv") {
