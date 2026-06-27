@@ -240,6 +240,38 @@ function Get-DefaultWslDistro {
     return $null
 }
 
+function Get-UserWslDistros {
+    $Distros = @(
+        wsl --list --quiet |
+            ForEach-Object { ($_ -replace "`0", "").Trim() } |
+            Where-Object {
+                $_ -and
+                $_ -notmatch '^docker-desktop($|-)' -and
+                $_ -ne 'docker-desktop-data'
+            }
+    )
+
+    return $Distros
+}
+
+function Select-ExistingWslDistro {
+    $Distros = @(Get-UserWslDistros)
+    if ($Distros.Count -eq 0) {
+        return $null
+    }
+
+    $Ubuntu = $Distros | Where-Object { $_ -eq "Ubuntu" } | Select-Object -First 1
+    if (-not $Ubuntu) {
+        $Ubuntu = $Distros | Where-Object { $_ -like "Ubuntu*" } | Select-Object -First 1
+    }
+
+    if ($Ubuntu) {
+        return $Ubuntu
+    }
+
+    return $Distros[0]
+}
+
 function Get-DefaultWslVersion {
     $DefaultLine = wsl --list --verbose | Where-Object { $_ -match '^\s*\*' } | Select-Object -First 1
     if ($DefaultLine -and $DefaultLine -match '\s+([12])\s*$') {
@@ -285,16 +317,28 @@ exit $LASTEXITCODE
 
     $DefaultDistro = Get-DefaultWslDistro
     if (-not $DefaultDistro) {
+        $ExistingDistro = Select-ExistingWslDistro
+        if ($ExistingDistro) {
+            Write-Host "No default WSL distribution is set. Reusing existing distribution '$ExistingDistro'..."
+            Invoke-RequiredNative `
+                -Command "wsl" `
+                -Arguments @("--set-default", $ExistingDistro) `
+                -ErrorMessage "Could not set '$ExistingDistro' as the default WSL distribution."
+            $DefaultDistro = $ExistingDistro
+        }
+    }
+
+    if (-not $DefaultDistro) {
         if ($SkipInstall) {
             throw "No default WSL distribution was found. Install a WSL 2 distribution, then retry."
         }
 
-        Write-Host "No WSL distribution was found. Installing the default WSL 2 distribution..."
+        Write-Host "No reusable WSL distribution was found. Installing Ubuntu..."
         try {
             $InstallProcess = Start-Process `
                 -FilePath "wsl.exe" `
                 -Verb RunAs `
-                -ArgumentList @("--install") `
+                -ArgumentList @("--install", "--distribution", "Ubuntu", "--no-launch") `
                 -Wait `
                 -PassThru
         }
@@ -306,7 +350,7 @@ exit $LASTEXITCODE
             throw "WSL distribution installation failed. Check Windows Update and virtualization settings."
         }
 
-        throw "WSL distribution installation was started. Reboot Windows if requested, complete the distribution setup, then run this script again."
+        throw "Ubuntu installation was started. Reboot Windows if requested, launch Ubuntu once to complete its setup, then run this script again."
     }
 
     $WslVersion = Get-DefaultWslVersion
