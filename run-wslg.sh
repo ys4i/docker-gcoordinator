@@ -80,9 +80,7 @@ if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
   export WAYLAND_DISPLAY=wayland-0
 fi
 
-if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
-  export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
-fi
+export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
 
 if [[ -z "${PULSE_SERVER:-}" ]]; then
   export PULSE_SERVER=/mnt/wslg/PulseServer

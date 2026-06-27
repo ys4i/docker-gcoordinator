@@ -3,7 +3,7 @@ services:
     environment:
       DISPLAY: ${DISPLAY}
       WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-wayland-0}
-      XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:-/mnt/wslg/runtime-dir}
+      XDG_RUNTIME_DIR: /mnt/wslg/runtime-dir
       PULSE_SERVER: ${PULSE_SERVER:-/mnt/wslg/PulseServer}
       LIBGL_ALWAYS_SOFTWARE: "0"
       QT_XCB_GL_INTEGRATION: xcb_glx
