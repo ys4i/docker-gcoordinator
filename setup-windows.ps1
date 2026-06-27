@@ -251,7 +251,36 @@ function Get-DefaultWslVersion {
 
 function Ensure-WSL2 {
     if (-not (Test-Command wsl)) {
-        throw "The wsl command is not available. Run 'wsl --install' from an elevated PowerShell window, reboot Windows, then retry."
+        if ($SkipInstall) {
+            throw "WSL is not installed. Re-run without -SkipInstall to enable the required Windows features."
+        }
+
+        Write-Host "WSL is not installed. Requesting administrator permission to enable WSL 2 features..."
+        $ElevatedCommands = @'
+& dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+exit $LASTEXITCODE
+'@
+        $EncodedCommands = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($ElevatedCommands))
+
+        try {
+            $InstallProcess = Start-Process `
+                -FilePath "powershell.exe" `
+                -Verb RunAs `
+                -ArgumentList @("-NoProfile", "-EncodedCommand", $EncodedCommands) `
+                -Wait `
+                -PassThru
+        }
+        catch {
+            throw "Administrator permission was not granted. WSL 2 installation requires an elevated PowerShell process."
+        }
+
+        if ($InstallProcess.ExitCode -ne 0) {
+            throw "Could not enable the Windows features required by WSL 2. Verify that Windows is up to date and hardware virtualization is enabled."
+        }
+
+        throw "WSL 2 Windows features were enabled. Restart Windows, then run this script again to install the default Linux distribution."
     }
 
     $DefaultDistro = Get-DefaultWslDistro
@@ -261,10 +290,22 @@ function Ensure-WSL2 {
         }
 
         Write-Host "No WSL distribution was found. Installing the default WSL 2 distribution..."
-        Invoke-RequiredNative `
-            -Command "wsl" `
-            -Arguments @("--install") `
-            -ErrorMessage "WSL distribution installation failed. Check Windows Update and virtualization settings."
+        try {
+            $InstallProcess = Start-Process `
+                -FilePath "wsl.exe" `
+                -Verb RunAs `
+                -ArgumentList @("--install") `
+                -Wait `
+                -PassThru
+        }
+        catch {
+            throw "Administrator permission was not granted. Installing WSL requires an elevated PowerShell process."
+        }
+
+        if ($InstallProcess.ExitCode -ne 0) {
+            throw "WSL distribution installation failed. Check Windows Update and virtualization settings."
+        }
+
         throw "WSL distribution installation was started. Reboot Windows if requested, complete the distribution setup, then run this script again."
     }
 
