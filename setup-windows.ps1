@@ -64,7 +64,22 @@ function Install-WingetPackage {
     }
 
     Write-Host "Installing $Name with winget..."
-    winget install --id $Id --exact --silent --accept-package-agreements --accept-source-agreements
+    if ($Id -eq "Docker.DockerDesktop") {
+        winget install `
+            --id $Id `
+            --exact `
+            --silent `
+            --accept-package-agreements `
+            --accept-source-agreements `
+            --override "install --quiet --accept-license --backend=wsl-2"
+    }
+    else {
+        winget install --id $Id --exact --silent --accept-package-agreements --accept-source-agreements
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Name installation failed with exit code $LASTEXITCODE."
+    }
 }
 
 function Add-PathIfExists {
@@ -194,9 +209,19 @@ function Ensure-DockerDesktop {
     if (-not (Test-DockerDaemon -TimeoutSeconds 5)) {
         Write-Host "Docker daemon is not responding."
         $DockerDesktop = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
-        if (Test-Path $DockerDesktop) {
+        if ((Invoke-NativeQuiet -Command "docker" -Arguments @("desktop", "version")) -eq 0) {
+            Write-Host "Starting Docker Desktop from the command line..."
+            Invoke-RequiredNative `
+                -Command "docker" `
+                -Arguments @("desktop", "start") `
+                -ErrorMessage "Docker Desktop CLI could not start Docker Desktop."
+        }
+        elseif (Test-Path $DockerDesktop) {
             Write-Host "Starting Docker Desktop..."
             Start-Process $DockerDesktop | Out-Null
+        }
+        else {
+            throw "Docker Desktop executable was not found after installation."
         }
         Wait-DockerReady
     }
