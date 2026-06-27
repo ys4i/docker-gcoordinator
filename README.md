@@ -8,7 +8,7 @@ Linux と Windows のホストから Docker Compose で起動できます。
 
 - Docker Engine と Docker Compose
 - Linux の場合: X11 または XWayland が使えるデスクトップ環境
-- Windows の場合: Docker Desktop と VcXsrv/X410、または WSL2 + WSLg
+- Windows の場合: WSL2 Ubuntu と VcXsrv/X410、または WSLg
 
 ## ビルド
 
@@ -67,7 +67,7 @@ xhost -local:docker
 
 ## Windows での起動
 
-Windows では Docker Desktop の Linux コンテナを使います。
+Windows では WSL2 Ubuntu 内にインストールした Docker Engine を使います。
 GUI 表示には VcXsrv または X410 などの Windows X server が必要です。
 
 ### 自動セットアップ
@@ -97,7 +97,8 @@ powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1 -Mode VcXsrv
 .\setup-windows.ps1 -Mode VcXsrv -Launch
 ```
 
-`winget` が使える環境では Docker Desktop と VcXsrv の導入を試みます。
+セットアップはWSL2 Ubuntu内へDocker EngineとDocker Compose pluginを導入します。
+Docker Desktopは使用しません。`winget` が使える環境ではVcXsrvの導入を試みます。
 インストールを行わず確認とビルドだけ行う場合:
 
 ```powershell
@@ -135,12 +136,12 @@ New-Item -ItemType Directory -Force -Path log | Out-Null
 .\run-windows.ps1 2>&1 | Tee-Object -FilePath "log\run-windows-$(Get-Date -Format yyyyMMdd-HHmmss).log"
 ```
 
-手動で起動する場合:
+手動で起動する場合はWSL内でWindowsホストのIPアドレスを`DISPLAY`へ設定します。
 
-```powershell
-$env:DISPLAY = "host.docker.internal:0.0"
-$env:UID = "1000"
-$env:GID = "1000"
+```bash
+WINDOWS_HOST=$(awk '/^nameserver / { print $2; exit }' /etc/resolv.conf)
+export DISPLAY="${WINDOWS_HOST}:0.0"
+UID=$(id -u) GID=$(id -g) \
 docker compose -f docker-compose.yml -f docker-compose.windows.yml run --rm gcoordinator
 ```
 
@@ -169,6 +170,7 @@ powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1 -Mode WSLg
 WSL 内でセットアップする場合:
 
 ```bash
+./setup-wsl-docker.sh
 ./setup-wslg.sh
 ```
 
@@ -184,7 +186,7 @@ WSL 内でセットアップする場合:
 - WSL2 distro
 - WSLg が有効
 - GPU vendor の WSL 対応ドライバ
-- Docker Desktop の WSL integration、または WSL 内の Docker Engine
+- WSL内のDocker Engine（`setup-windows.ps1`で自動導入）
 
 WSL 側で以下が存在することを確認します。
 
@@ -231,4 +233,4 @@ WSLg 方式では以下をコンテナへ渡します。
 - `/dev/dri` がない環境では、GPU/DRI デバイスの受け渡しは行われません。
 - Windows では X server 側の設定により GUI が表示されない場合があります。まず VcXsrv の `Disable access control` を確認してください。
 - Windows で GPU 描画を使いたい場合は、PowerShell + VcXsrv ではなく WSLg 方式を使ってください。
-- パスに日本語や空白が含まれる場所では、Docker Desktop の volume mount が不安定になる場合があります。
+- パスに日本語や空白が含まれる場所では、WindowsとWSL間のパス変換が不安定になる場合があります。

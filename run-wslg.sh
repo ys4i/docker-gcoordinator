@@ -9,6 +9,15 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! docker info >/dev/null 2>&1; then
+  sudo -n service docker start >/dev/null 2>&1 || true
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker Engine is not running. Run setup-wsl-docker.sh first." >&2
+  exit 1
+fi
+
 COMPOSE_CMD=()
 if docker compose version >/dev/null 2>&1; then
   COMPOSE_CMD=(docker compose)
@@ -16,7 +25,7 @@ elif docker-compose version >/dev/null 2>&1; then
   COMPOSE_CMD=(docker-compose)
 else
   echo "Docker Compose is not available inside WSL." >&2
-  echo "Enable Docker Desktop WSL integration for this distro, or install the Docker Compose plugin in WSL." >&2
+  echo "Run setup-wsl-docker.sh to install the Docker Compose plugin." >&2
   exit 1
 fi
 
