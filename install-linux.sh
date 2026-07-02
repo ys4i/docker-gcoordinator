@@ -68,8 +68,8 @@ fi
 
 if [[ "$ACTION" == "setup" ]]; then
   echo "Setup is required. Running setup-linux.sh..."
-  exec bash "$INSTALL_DIR/setup-linux.sh" "$@"
+  exec bash "$INSTALL_DIR/scripts/setup-linux.sh" "$@"
 fi
 
 echo "Installation is current. Running run-linux.sh..."
-exec bash "$INSTALL_DIR/run-linux.sh"
+exec bash "$INSTALL_DIR/scripts/run-linux.sh"

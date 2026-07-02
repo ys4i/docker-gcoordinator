@@ -2,7 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_DIR"
 
 NO_BUILD=0
 NO_LAUNCH=0
@@ -137,9 +138,9 @@ fi
 echo "Linux setup completed."
 
 if [[ "$NO_LAUNCH" == "1" ]]; then
-  echo "Run: ./run-linux.sh"
+  echo "Run: ./scripts/run-linux.sh"
   exit 0
 fi
 
 echo "Launching g-coordinator..."
-exec bash ./run-linux.sh
+exec bash "$SCRIPT_DIR/run-linux.sh"

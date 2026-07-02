@@ -2,7 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_DIR"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "This script must be run on macOS." >&2
@@ -21,7 +22,7 @@ fi
 
 if ! docker info >/dev/null 2>&1; then
   if [[ ! -d /Applications/Docker.app ]]; then
-    echo "Docker Desktop is not installed. Run ./setup-macos.sh first." >&2
+    echo "Docker Desktop is not installed. Run ./install-macos.sh first." >&2
     exit 1
   fi
 

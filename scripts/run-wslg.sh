@@ -2,7 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_DIR"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker command not found." >&2
@@ -14,7 +15,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 if ! docker info >/dev/null 2>&1; then
-  echo "Docker Engine is not running. Run setup-wsl-docker.sh first." >&2
+  echo "Docker Engine is not running. Run scripts/setup-wsl-docker.sh first." >&2
   exit 1
 fi
 
@@ -25,7 +26,7 @@ elif docker-compose version >/dev/null 2>&1; then
   COMPOSE_CMD=(docker-compose)
 else
   echo "Docker Compose is not available inside WSL." >&2
-  echo "Run setup-wsl-docker.sh to install the Docker Compose plugin." >&2
+  echo "Run scripts/setup-wsl-docker.sh to install the Docker Compose plugin." >&2
   exit 1
 fi
 

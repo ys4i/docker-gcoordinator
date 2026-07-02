@@ -10,7 +10,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $ScriptDir
+$RepoDir = Split-Path -Parent $ScriptDir
+Set-Location $RepoDir
 
 $SetupProgressId = 1
 $ShouldLaunch = $Launch -or -not $NoLaunch
@@ -111,7 +112,7 @@ function Invoke-RequiredNative {
 }
 
 function Save-BuildState {
-    $Revision = (& git -C $ScriptDir rev-parse HEAD 2>$null | Out-String).Trim()
+    $Revision = (& git -C $RepoDir rev-parse HEAD 2>$null | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or -not $Revision) {
         return
     }
@@ -503,7 +504,7 @@ function Get-OrCreateWSLUser {
             "--user", "root",
             "--cd", $WslRepoPath,
             "--exec", "bash", "-lc",
-            "sed -i 's/\r$//' setup-wsl-user.sh && bash ./setup-wsl-user.sh prepare '$WslUser'"
+            "sed -i 's/\r$//' scripts/setup-wsl-user.sh && bash ./scripts/setup-wsl-user.sh prepare '$WslUser'"
         ) `
         -ErrorMessage "Could not create or configure the regular WSL user '$WslUser'."
 
@@ -540,7 +541,7 @@ function Ensure-WSLDockerEngine {
 
     Write-Host "Installing or checking Docker Engine inside WSL Ubuntu..."
     wsl --distribution $Distro --user root --cd $WslRepoPath --exec bash -lc `
-        "sed -i 's/\r$//' setup-wsl-docker.sh && bash ./setup-wsl-docker.sh '$WslUser'"
+        "sed -i 's/\r$//' scripts/setup-wsl-docker.sh && bash ./scripts/setup-wsl-docker.sh '$WslUser'"
     if ($LASTEXITCODE -ne 0) {
         throw "Docker Engine setup inside WSL failed. Review the error above, then re-run this script."
     }
@@ -588,11 +589,11 @@ try {
         Restart-WSLDistroForDefaultUser -Distro $WslDistro
         Write-SetupProgress -Percent 100 -Status "Setup completed"
         Write-Host "Windows VcXsrv setup completed."
-        Write-Host "Run: .\run-windows.ps1"
+        Write-Host "Run: .\scripts\run-windows.ps1"
 
         if ($ShouldLaunch) {
             Write-Host "Launching run-windows.ps1..."
-            .\run-windows.ps1 -Mode VcXsrv
+            & (Join-Path $ScriptDir "run-windows.ps1") -Mode VcXsrv
         }
     }
     else {
@@ -616,13 +617,13 @@ try {
         Restart-WSLDistroForDefaultUser -Distro $WslDistro
         Write-SetupProgress -Percent 100 -Status "Setup completed"
         Write-Host "Windows WSLg setup checks completed."
-        Write-Host "Open this repository inside WSL and run: ./run-wslg.sh"
+        Write-Host "Open this repository inside WSL and run: ./scripts/run-wslg.sh"
 
         if ($ShouldLaunch) {
             Write-Host "Launching run-wslg.sh..."
             Invoke-RequiredNative `
                 -Command "wsl" `
-                -Arguments @("--distribution", $WslDistro, "--user", $WslUser, "--cd", $WslRepoPath, "--exec", "sh", "-lc", "./run-wslg.sh") `
+                -Arguments @("--distribution", $WslDistro, "--user", $WslUser, "--cd", $WslRepoPath, "--exec", "sh", "-lc", "./scripts/run-wslg.sh") `
                 -ErrorMessage "WSLg application startup failed."
         }
     }

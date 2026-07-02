@@ -6,7 +6,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $ScriptDir
+$RepoDir = Split-Path -Parent $ScriptDir
+Set-Location $RepoDir
 
 function Invoke-RequiredNative {
     param(
@@ -22,9 +23,9 @@ function Invoke-RequiredNative {
 }
 
 function Get-WSLRepoPath {
-    $WslPathOutput = @(& wsl --exec wslpath -a $ScriptDir)
+    $WslPathOutput = @(& wsl --exec wslpath -a $RepoDir)
     if ($LASTEXITCODE -ne 0) {
-        throw "Could not convert repository path '$ScriptDir' to a WSL path."
+        throw "Could not convert repository path '$RepoDir' to a WSL path."
     }
     $WslPath = ($WslPathOutput -join "").Trim()
     if (-not $WslPath) {
@@ -34,7 +35,7 @@ function Get-WSLRepoPath {
 }
 
 if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) {
-    throw "wsl command not found. Run setup-windows.ps1 first."
+    throw "wsl command not found. Run install-windows.ps1 first."
 }
 
 $WslRepoPath = Get-WSLRepoPath
@@ -50,7 +51,7 @@ if ($Mode -eq "WSLg") {
             "--exec",
             "bash",
             "-lc",
-            "$CommonPrefix && sed -i 's/\r$//' run-wslg.sh && chmod +x run-wslg.sh && ./run-wslg.sh"
+            "$CommonPrefix && sed -i 's/\r$//' scripts/run-wslg.sh && chmod +x scripts/run-wslg.sh && ./scripts/run-wslg.sh"
         ) `
         -ErrorMessage "WSLg application startup failed."
 }
@@ -64,7 +65,7 @@ else {
             "--exec",
             "bash",
             "-lc",
-            "sed -i 's/\r$//' run-vcxsrv.sh && chmod +x run-vcxsrv.sh && ./run-vcxsrv.sh"
+            "sed -i 's/\r$//' scripts/run-vcxsrv.sh && chmod +x scripts/run-vcxsrv.sh && ./scripts/run-vcxsrv.sh"
         ) `
         -ErrorMessage "VcXsrv application startup failed. Review the specific error above."
 }

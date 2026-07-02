@@ -2,7 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_DIR"
 
 NO_BUILD=0
 NO_LAUNCH=0
@@ -108,9 +109,9 @@ fi
 echo "macOS setup completed."
 
 if [[ "$NO_LAUNCH" == "1" ]]; then
-  echo "Run: ./run-macos.sh"
+  echo "Run: ./scripts/run-macos.sh"
   exit 0
 fi
 
 echo "Launching g-coordinator..."
-exec ./run-macos.sh
+exec "$SCRIPT_DIR/run-macos.sh"

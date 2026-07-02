@@ -53,7 +53,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
 RUN chmod -R a+rwX /opt/G-coordinator \
     && chmod -R a+rwX /usr/local/lib/python3.10/dist-packages/gcoordinator
 
-COPY run-macos-container.sh /usr/local/bin/run-macos-container
+COPY scripts/run-macos-container.sh /usr/local/bin/run-macos-container
 RUN chmod 755 /usr/local/bin/run-macos-container
 
 WORKDIR /opt/G-coordinator/src

@@ -64,8 +64,8 @@ fi
 
 if [[ "$ACTION" == "setup" ]]; then
   echo "Setup is required. Running setup-macos.sh..."
-  exec bash "$INSTALL_DIR/setup-macos.sh" "$@"
+  exec bash "$INSTALL_DIR/scripts/setup-macos.sh" "$@"
 fi
 
 echo "Installation is current. Running run-macos.sh..."
-exec bash "$INSTALL_DIR/run-macos.sh"
+exec bash "$INSTALL_DIR/scripts/run-macos.sh"

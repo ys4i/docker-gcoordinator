@@ -107,7 +107,7 @@ if ($Action -eq "setup") {
     Write-Host "Setup is required. Running setup-windows.ps1..."
     $SetupArguments = @(
         "-NoProfile", "-ExecutionPolicy", "Bypass",
-        "-File", (Join-Path $InstallDir "setup-windows.ps1"),
+        "-File", (Join-Path $InstallDir "scripts\setup-windows.ps1"),
         "-Mode", $Mode
     )
     if ($NoLaunch) {
@@ -124,5 +124,5 @@ if ($NoLaunch) {
 
 Write-Host "Installation is current. Running run-windows.ps1..."
 & powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File (Join-Path $InstallDir "run-windows.ps1") -Mode $Mode
+    -File (Join-Path $InstallDir "scripts\run-windows.ps1") -Mode $Mode
 exit $LASTEXITCODE
