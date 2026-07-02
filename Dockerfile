@@ -39,8 +39,9 @@ RUN apt-get -o Acquire::Check-Date=false update \
         libxcb-xinerama0 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p "$XDG_RUNTIME_DIR" /workspace \
-    && chmod 700 "$XDG_RUNTIME_DIR"
+RUN mkdir -p "$XDG_RUNTIME_DIR" /workspace /tmp/.X11-unix \
+    && chmod 700 "$XDG_RUNTIME_DIR" \
+    && chmod 1777 /tmp/.X11-unix
 
 RUN git clone --depth 1 "$GCOORDINATOR_REPO" /opt/G-coordinator
 
