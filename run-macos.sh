@@ -9,14 +9,38 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
+if ! command -v docker >/dev/null 2>&1 &&
+  [[ -x /Applications/Docker.app/Contents/Resources/bin/docker ]]; then
+  export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
+fi
+
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker command not found. Install and start Docker Desktop." >&2
   exit 1
 fi
 
 if ! docker info >/dev/null 2>&1; then
-  echo "Docker Desktop is not running." >&2
-  exit 1
+  if [[ ! -d /Applications/Docker.app ]]; then
+    echo "Docker Desktop is not installed. Run ./setup-macos.sh first." >&2
+    exit 1
+  fi
+
+  echo "Starting Docker Desktop..."
+  open -a Docker
+
+  echo "Waiting for Docker Desktop to become ready..."
+  for _ in {1..120}; do
+    if docker info >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+
+  if ! docker info >/dev/null 2>&1; then
+    echo "Docker Desktop did not become ready within 120 seconds." >&2
+    echo "Complete any first-run dialogs and retry." >&2
+    exit 1
+  fi
 fi
 
 if ! docker compose version >/dev/null 2>&1; then
