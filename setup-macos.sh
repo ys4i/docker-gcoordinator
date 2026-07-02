@@ -34,26 +34,26 @@ if [[ "$(id -u)" -eq 0 ]]; then
   exit 1
 fi
 
-if ! command -v brew >/dev/null 2>&1; then
-  if ! command -v curl >/dev/null 2>&1; then
-    echo "curl is required to install Homebrew." >&2
-    exit 1
-  fi
-
-  echo "Installing Homebrew..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-  if [[ -x /opt/homebrew/bin/brew ]]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  elif [[ -x /usr/local/bin/brew ]]; then
-    eval "$(/usr/local/bin/brew shellenv)"
-  else
-    echo "Homebrew installation completed, but the brew command was not found." >&2
-    exit 1
-  fi
-fi
-
 if [[ ! -d /Applications/Docker.app ]]; then
+  if ! command -v brew >/dev/null 2>&1; then
+    if ! command -v curl >/dev/null 2>&1; then
+      echo "curl is required to install Homebrew." >&2
+      exit 1
+    fi
+
+    echo "Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+      eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [[ -x /usr/local/bin/brew ]]; then
+      eval "$(/usr/local/bin/brew shellenv)"
+    else
+      echo "Homebrew installation completed, but the brew command was not found." >&2
+      exit 1
+    fi
+  fi
+
   echo "Installing Docker Desktop..."
   brew install --cask docker-desktop
 else
@@ -96,6 +96,13 @@ mkdir -p workspace log
 if [[ "$NO_BUILD" != "1" ]]; then
   echo "Building the g-coordinator Docker image..."
   docker compose -f docker-compose.yml -f docker-compose.macos.yml build
+
+  if command -v git >/dev/null 2>&1 &&
+    revision="$(git rev-parse HEAD 2>/dev/null)"; then
+    state_dir="$HOME/Library/Application Support/docker-gcoordinator"
+    mkdir -p "$state_dir"
+    printf '%s\n' "$revision" >"$state_dir/built-revision"
+  fi
 fi
 
 echo "macOS setup completed."

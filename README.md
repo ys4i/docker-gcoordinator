@@ -72,11 +72,27 @@ Docker Desktopのインストール、Dockerイメージの作成、g-coordinato
 スクリプトで自動化できます。GUIはコンテナ内の仮想ディスプレイで描画し、
 macOS標準の画面共有へVNC転送します。XQuartzは使用しません。
 
-初回は、正しいリポジトリの取得からセットアップ、起動までを次の1コマンドで
-実行できます。
+次の1コマンドで、インストール状態の判別、最新版への更新、Docker Desktopの
+必要時のみのインストール、イメージ作成、起動まで実行できます。初回と2回目以降で
+同じコマンドを使用します。
 
 ```bash
-mkdir -p ~/Projects && git clone https://github.com/ys4i/docker-gcoordinator.git ~/Projects/docker-gcoordinator && bash ~/Projects/docker-gcoordinator/setup-macos.sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ys4i/docker-gcoordinator/main/install-macos.sh)"
+```
+
+既定のインストール先は`~/Projects/docker-gcoordinator`です。既に正しい
+リポジトリがある場合は`git pull --ff-only`で更新し、存在しない場合だけcloneします。
+判定後は次の処理を自動的に選択します。
+
+- 未インストール: clone後に`setup-macos.sh`を実行
+- 更新あり、Docker Desktop未導入、またはDockerイメージ未作成:
+  `setup-macos.sh`を実行
+- 導入済みかつ更新なし: `run-macos.sh`を実行
+
+セットアップだけを行って起動しない場合:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ys4i/docker-gcoordinator/main/install-macos.sh)" -- --no-launch
 ```
 
 macOSのプライバシー保護により、Docker Desktopが`Downloads`配下のCompose
@@ -103,7 +119,8 @@ bash ./setup-macos.sh --no-launch
 `sh setup-macos.sh`のように`sh`を明示して実行しないでください。このスクリプトは
 Bash用です。
 
-Homebrewが未導入の場合は、公式インストーラーを使ってHomebrewも導入します。
+Docker Desktopが未導入で、かつHomebrewも未導入の場合は、公式インストーラーを
+使ってHomebrewを導入します。Docker Desktopが導入済みならHomebrewは不要です。
 初回のみ、macOSのパスワード入力やDocker Desktopの利用規約確認を求められる
 場合があります。画面の案内に従って完了してください。
 
