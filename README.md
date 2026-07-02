@@ -72,18 +72,29 @@ Docker Desktopと[XQuartz](https://www.xquartz.org/)のインストール、XQua
 `Allow connections from network clients`設定、両アプリケーションの起動を
 次のスクリプトで自動化できます。
 
+macOSのプライバシー保護により、Docker Desktopが`Downloads`配下のCompose
+ファイルを読み取れない場合があります。ダウンロードしたプロジェクトは、実行前に
+`~/Projects`などへ移動してください。
+
+```bash
+mkdir -p ~/Projects && mv ~/Downloads/docker-coordinator-main ~/Projects/
+```
+
 Finderから`start-gcoordinator-macos.command`をダブルクリックすると、
 必要なセットアップ、Dockerイメージの作成、g-coordinatorの起動まで自動実行します。
 
 ```bash
-./setup-macos.sh
+bash ./setup-macos.sh
 ```
 
 このコマンドも同様にセットアップから起動まで実行します。セットアップだけを行う場合:
 
 ```bash
-./setup-macos.sh --no-launch
+bash ./setup-macos.sh --no-launch
 ```
+
+`sh setup-macos.sh`のように`sh`を明示して実行しないでください。このスクリプトは
+Bash用です。
 
 Homebrewが未導入の場合は、公式インストーラーを使ってHomebrewも導入します。
 初回のみ、macOSのパスワード入力やDocker Desktopの利用規約確認を求められる
@@ -120,6 +131,22 @@ UID=$(id -u) GID=$(id -g) MACOS_DISPLAY=host.docker.internal:0 \
 
 画面が表示されない場合は、XQuartzのネットワーククライアント許可を変更した後に
 XQuartzを完全に終了して再起動したことを確認してください。
+
+次のエラーが表示された場合は、プロジェクトが`Downloads`配下にないことを確認します。
+
+```text
+open .../docker-compose.yml: operation not permitted
+```
+
+移動後のプロジェクトを1コマンドでセットアップして起動できます。
+
+```bash
+cd ~/Projects/docker-coordinator-main && bash ./setup-macos.sh
+```
+
+移動後もエラーが続く場合は、macOSの「システム設定」>
+「プライバシーとセキュリティ」>「ファイルとフォルダ」で、使用しているターミナルと
+Docker Desktopへのアクセスを許可してください。
 
 ## Windows での起動
 
