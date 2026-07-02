@@ -9,6 +9,20 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! docker info >/dev/null 2>&1; then
+  echo "Starting Docker Engine..."
+  if command -v systemctl >/dev/null 2>&1; then
+    sudo systemctl start docker
+  else
+    sudo service docker start
+  fi
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker Engine is not running." >&2
+  exit 1
+fi
+
 if ! docker compose version >/dev/null 2>&1; then
   echo "docker compose is not available." >&2
   exit 1

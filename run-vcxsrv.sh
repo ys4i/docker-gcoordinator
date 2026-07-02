@@ -42,6 +42,7 @@ for candidate in "${WINDOWS_HOST_CANDIDATES[@]}"; do
   if [[ ! "$candidate" =~ ^[a-zA-Z0-9._:-]+$ ]]; then
     continue
   fi
+  # shellcheck disable=SC2016
   if timeout 2 bash -c 'exec 3<>"/dev/tcp/$1/6000"' _ "$candidate" 2>/dev/null; then
     WINDOWS_HOST="$candidate"
     break

@@ -110,6 +110,19 @@ function Invoke-RequiredNative {
     }
 }
 
+function Save-BuildState {
+    $Revision = (& git -C $ScriptDir rev-parse HEAD 2>$null | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $Revision) {
+        return
+    }
+
+    $StateDir = Join-Path $env:LOCALAPPDATA "docker-gcoordinator"
+    New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
+    Set-Content `
+        -Path (Join-Path $StateDir "windows-$($Mode.ToLowerInvariant())-built-revision") `
+        -Value $Revision
+}
+
 function Ensure-VcXsrv {
     $XLaunch = Join-Path $env:ProgramFiles "VcXsrv\xlaunch.exe"
     $VcXsrv = Join-Path $env:ProgramFiles "VcXsrv\vcxsrv.exe"
@@ -566,6 +579,7 @@ try {
                 -Command "wsl" `
                 -Arguments @("--distribution", $WslDistro, "--user", $WslUser, "--cd", $WslRepoPath, "--exec", "bash", "-lc", "docker compose -f docker-compose.yml -f docker-compose.windows.yml build") `
                 -ErrorMessage "Docker image build failed. Fix the build error above, then re-run this script."
+            Save-BuildState
         }
         else {
             Write-SetupProgress -Percent 90 -Status "Skipping Docker image build (-NoBuild)"
@@ -593,6 +607,7 @@ try {
                 -Command "wsl" `
                 -Arguments @("--distribution", $WslDistro, "--user", $WslUser, "--cd", $WslRepoPath, "--exec", "bash", "-lc", "docker compose -f docker-compose.yml -f docker-compose.wslg.yml build") `
                 -ErrorMessage "WSLg Docker image build failed. Fix the build error above, then re-run this script."
+            Save-BuildState
         }
         else {
             Write-SetupProgress -Percent 90 -Status "Skipping Docker image build (-NoBuild)"
