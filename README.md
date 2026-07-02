@@ -68,9 +68,9 @@ xhost -local:docker
 
 ## macOS での起動
 
-Docker Desktopと[XQuartz](https://www.xquartz.org/)のインストール、XQuartzの
-`Allow connections from network clients`設定、両アプリケーションの起動を
-次のスクリプトで自動化できます。
+Docker Desktopのインストール、Dockerイメージの作成、g-coordinatorの起動を
+スクリプトで自動化できます。GUIはコンテナ内の仮想ディスプレイで描画し、
+macOS標準の画面共有へVNC転送します。XQuartzは使用しません。
 
 初回は、正しいリポジトリの取得からセットアップ、起動までを次の1コマンドで
 実行できます。
@@ -107,37 +107,20 @@ Homebrewが未導入の場合は、公式インストーラーを使ってHomebr
 初回のみ、macOSのパスワード入力やDocker Desktopの利用規約確認を求められる
 場合があります。画面の案内に従って完了してください。
 
-手動でセットアップする場合は、Docker DesktopとXQuartzをインストールし、
-XQuartzの `Settings` > `Security` で
-`Allow connections from network clients`を有効にしてXQuartzを再起動します。
-
-Docker Desktop と XQuartz の起動後、次を実行します。
+Docker Desktopの起動後、次を実行すると、コンテナの準備完了後にmacOSの
+画面共有が自動的に開きます。
 
 ```bash
-./run-macos.sh
+bash ./run-macos.sh
 ```
 
-Docker DesktopまたはXQuartzが停止している場合は、自動的に起動して利用可能になるまで待機します。
-スクリプトは必要な場合だけXQuartzへのアクセスを一時的に許可し、終了時に元へ戻します。
-GUI接続には `host.docker.internal:0`、描画にはソフトウェアレンダリングを使用します。
-別のディスプレイ番号が必要な場合は次のように指定できます。
+Docker Desktopが停止している場合は、自動的に起動して利用可能になるまで待機します。
+VNCはホストの`127.0.0.1`だけに公開され、既定ではポート`5900`を使用します。
+ポートを変更する場合:
 
 ```bash
-MACOS_DISPLAY=host.docker.internal:1 ./run-macos.sh
+MACOS_VNC_PORT=5901 bash ./run-macos.sh
 ```
-
-手動で起動する場合:
-
-```bash
-/opt/X11/bin/xhost +localhost
-mkdir -p workspace
-UID=$(id -u) GID=$(id -g) MACOS_DISPLAY=host.docker.internal:0 \
-  docker compose -f docker-compose.yml -f docker-compose.macos.yml run --rm gcoordinator
-/opt/X11/bin/xhost -localhost
-```
-
-画面が表示されない場合は、XQuartzのネットワーククライアント許可を変更した後に
-XQuartzを完全に終了して再起動したことを確認してください。
 
 次のエラーが表示された場合は、プロジェクトが`Downloads`配下にないことを確認します。
 

@@ -48,58 +48,39 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
-XHOST=""
-if command -v xhost >/dev/null 2>&1; then
-  XHOST="$(command -v xhost)"
-elif [[ -x /opt/X11/bin/xhost ]]; then
-  XHOST=/opt/X11/bin/xhost
-else
-  echo "xhost was not found. Install XQuartz, start it, and enable network client connections." >&2
+mkdir -p workspace
+export MACOS_VNC_PORT="${MACOS_VNC_PORT:-5900}"
+COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.macos.yml)
+
+CONTAINER_ID="$(
+  env UID="$(id -u)" GID="$(id -g)" MACOS_VNC_PORT="$MACOS_VNC_PORT" \
+    docker compose "${COMPOSE_FILES[@]}" run --rm --detach --service-ports gcoordinator
+)"
+
+cleanup() {
+  docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT INT TERM
+
+echo "Waiting for the VNC display on port $MACOS_VNC_PORT..."
+VNC_READY=0
+for _ in {1..120}; do
+  if nc -z 127.0.0.1 "$MACOS_VNC_PORT" >/dev/null 2>&1; then
+    VNC_READY=1
+    break
+  fi
+  if ! docker inspect "$CONTAINER_ID" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+if [[ "$VNC_READY" != "1" ]]; then
+  docker logs "$CONTAINER_ID" >&2 || true
+  echo "The VNC display did not become ready." >&2
   exit 1
 fi
 
-if ! pgrep -x Xquartz >/dev/null 2>&1; then
-  if ! open -Ra XQuartz >/dev/null 2>&1; then
-    echo "XQuartz is not installed. Run ./setup-macos.sh first." >&2
-    exit 1
-  fi
-
-  echo "Starting XQuartz..."
-  open -a XQuartz
-
-  for _ in {1..30}; do
-    if pgrep -x Xquartz >/dev/null 2>&1; then
-      break
-    fi
-    sleep 1
-  done
-
-  if ! pgrep -x Xquartz >/dev/null 2>&1; then
-    echo "XQuartz did not become ready within 30 seconds." >&2
-    exit 1
-  fi
-fi
-
-XHOST_GRANTED=0
-if ! "$XHOST" 2>/dev/null | grep -Eq '(^|[[:space:]])(INET:)?localhost([[:space:]]|$)'; then
-  if ! "$XHOST" +localhost >/dev/null 2>&1; then
-    echo "Could not grant localhost access to XQuartz." >&2
-    echo "In XQuartz Settings > Security, enable 'Allow connections from network clients', restart XQuartz, and retry." >&2
-    exit 1
-  fi
-  XHOST_GRANTED=1
-fi
-
-cleanup() {
-  if [[ "$XHOST_GRANTED" == "1" ]]; then
-    "$XHOST" -localhost >/dev/null 2>&1 || true
-  fi
-}
-trap cleanup EXIT
-
-mkdir -p workspace
-export MACOS_DISPLAY="${MACOS_DISPLAY:-host.docker.internal:0}"
-
-echo "XQuartz enabled: DISPLAY=$MACOS_DISPLAY"
-env UID="$(id -u)" GID="$(id -g)" \
-  docker compose -f docker-compose.yml -f docker-compose.macos.yml run --rm gcoordinator
+echo "Opening macOS Screen Sharing..."
+open "vnc://127.0.0.1:$MACOS_VNC_PORT"
+docker logs --follow "$CONTAINER_ID"

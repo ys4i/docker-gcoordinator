@@ -16,6 +16,8 @@ RUN apt-get -o Acquire::Check-Date=false update \
         python3 \
         python3-pip \
         python3-venv \
+        xvfb \
+        x11vnc \
         libdbus-1-3 \
         libfontconfig1 \
         libgl1 \
@@ -49,6 +51,9 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
 
 RUN chmod -R a+rwX /opt/G-coordinator \
     && chmod -R a+rwX /usr/local/lib/python3.10/dist-packages/gcoordinator
+
+COPY run-macos-container.sh /usr/local/bin/run-macos-container
+RUN chmod 755 /usr/local/bin/run-macos-container
 
 WORKDIR /opt/G-coordinator/src
 

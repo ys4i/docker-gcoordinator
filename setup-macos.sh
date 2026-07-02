@@ -60,53 +60,6 @@ else
   echo "Docker Desktop is already installed."
 fi
 
-if [[ ! -d /Applications/Utilities/XQuartz.app ]]; then
-  echo "Installing XQuartz..."
-  brew install --cask xquartz
-else
-  echo "XQuartz is already installed."
-fi
-
-echo "Enabling XQuartz network client connections..."
-defaults write org.xquartz.X11 nolisten_tcp -bool false
-defaults write org.xquartz.X11 enable_iglx -bool true
-
-# Apply the preference to a new XQuartz process. The normal quit request is
-# attempted first so existing X11 clients can shut down cleanly.
-if pgrep -x Xquartz >/dev/null 2>&1; then
-  osascript -e 'tell application "XQuartz" to quit' >/dev/null 2>&1 || true
-  for _ in {1..20}; do
-    if ! pgrep -x Xquartz >/dev/null 2>&1; then
-      break
-    fi
-    sleep 1
-  done
-fi
-
-if pgrep -x Xquartz >/dev/null 2>&1; then
-  echo "XQuartz did not exit normally. Stopping it..."
-  pkill -TERM -x Xquartz >/dev/null 2>&1 || true
-  for _ in {1..10}; do
-    if ! pgrep -x Xquartz >/dev/null 2>&1; then
-      break
-    fi
-    sleep 1
-  done
-fi
-
-if pgrep -x Xquartz >/dev/null 2>&1; then
-  echo "Forcing the old XQuartz process to stop..."
-  pkill -KILL -x Xquartz >/dev/null 2>&1 || true
-  sleep 1
-fi
-
-if pgrep -x Xquartz >/dev/null 2>&1; then
-  echo "Could not stop the old XQuartz process." >&2
-  exit 1
-fi
-
-open -a XQuartz
-
 echo "Starting Docker Desktop..."
 open -a Docker
 

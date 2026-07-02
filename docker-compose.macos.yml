@@ -2,8 +2,10 @@ services:
   gcoordinator:
     platform: linux/amd64
     environment:
-      DISPLAY: ${MACOS_DISPLAY:-host.docker.internal:0}
+      DISPLAY: :99
       LIBGL_ALWAYS_SOFTWARE: "1"
-      LIBGL_ALWAYS_INDIRECT: "1"
       QT_XCB_GL_INTEGRATION: xcb_glx
       PYOPENGL_PLATFORM: glx
+    command: ["/usr/local/bin/run-macos-container"]
+    ports:
+      - "127.0.0.1:${MACOS_VNC_PORT:-5900}:5900"
