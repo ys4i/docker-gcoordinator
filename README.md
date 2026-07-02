@@ -72,12 +72,19 @@ Docker Desktopと[XQuartz](https://www.xquartz.org/)のインストール、XQua
 `Allow connections from network clients`設定、両アプリケーションの起動を
 次のスクリプトで自動化できます。
 
+初回は、正しいリポジトリの取得からセットアップ、起動までを次の1コマンドで
+実行できます。
+
+```bash
+mkdir -p ~/Projects && git clone https://github.com/ys4i/docker-gcoordinator.git ~/Projects/docker-gcoordinator && bash ~/Projects/docker-gcoordinator/setup-macos.sh
+```
+
 macOSのプライバシー保護により、Docker Desktopが`Downloads`配下のCompose
 ファイルを読み取れない場合があります。ダウンロードしたプロジェクトは、実行前に
 `~/Projects`などへ移動してください。
 
 ```bash
-mkdir -p ~/Projects && mv ~/Downloads/docker-coordinator-main ~/Projects/
+mkdir -p ~/Projects && mv ~/Downloads/docker-gcoordinator-main ~/Projects/
 ```
 
 Finderから`start-gcoordinator-macos.command`をダブルクリックすると、
@@ -141,7 +148,7 @@ open .../docker-compose.yml: operation not permitted
 移動後のプロジェクトを1コマンドでセットアップして起動できます。
 
 ```bash
-cd ~/Projects/docker-coordinator-main && bash ./setup-macos.sh
+cd ~/Projects/docker-gcoordinator-main && bash ./setup-macos.sh
 ```
 
 移動後もエラーが続く場合は、macOSの「システム設定」>
