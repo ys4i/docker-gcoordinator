@@ -49,7 +49,27 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 mkdir -p workspace
-export MACOS_VNC_PORT="${MACOS_VNC_PORT:-5900}"
+
+if [[ -n "${MACOS_VNC_PORT:-}" ]]; then
+  if nc -z 127.0.0.1 "$MACOS_VNC_PORT" >/dev/null 2>&1; then
+    echo "VNC port $MACOS_VNC_PORT is already in use." >&2
+    exit 1
+  fi
+else
+  for port in {5900..5999}; do
+    if ! nc -z 127.0.0.1 "$port" >/dev/null 2>&1; then
+      MACOS_VNC_PORT="$port"
+      break
+    fi
+  done
+
+  if [[ -z "${MACOS_VNC_PORT:-}" ]]; then
+    echo "No available VNC port was found between 5900 and 5999." >&2
+    exit 1
+  fi
+fi
+
+export MACOS_VNC_PORT
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.macos.yml)
 
 CONTAINER_ID="$(
