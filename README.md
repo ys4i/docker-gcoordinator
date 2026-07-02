@@ -2,12 +2,13 @@
 
 G-coordinator GUI 版を Docker コンテナ内で起動するための構成です。
 
-Linux と Windows のホストから Docker Compose で起動できます。
+Linux、macOS、Windows のホストから Docker Compose で起動できます。
 
 ## 必要なもの
 
 - Docker Engine と Docker Compose
 - Linux の場合: X11 または XWayland が使えるデスクトップ環境
+- macOS の場合: Docker Desktop と XQuartz
 - Windows の場合: WSL2 Ubuntu と VcXsrv/X410、または WSLg
 
 ## ビルド
@@ -64,6 +65,51 @@ G-code や作業ファイルの受け渡しに使えます。
 ```bash
 xhost -local:docker
 ```
+
+## macOS での起動
+
+Docker Desktopと[XQuartz](https://www.xquartz.org/)のインストール、XQuartzの
+`Allow connections from network clients`設定、両アプリケーションの起動を
+次のスクリプトで自動化できます。
+
+```bash
+./setup-macos.sh
+```
+
+Homebrewが未導入の場合は、公式インストーラーを使ってHomebrewも導入します。
+初回のみ、macOSのパスワード入力やDocker Desktopの利用規約確認を求められる
+場合があります。画面の案内に従って完了してください。
+
+手動でセットアップする場合は、Docker DesktopとXQuartzをインストールし、
+XQuartzの `Settings` > `Security` で
+`Allow connections from network clients`を有効にしてXQuartzを再起動します。
+
+Docker Desktop と XQuartz の起動後、次を実行します。
+
+```bash
+./run-macos.sh
+```
+
+スクリプトは必要な場合だけXQuartzへのアクセスを一時的に許可し、終了時に元へ戻します。
+GUI接続には `host.docker.internal:0`、描画にはソフトウェアレンダリングを使用します。
+別のディスプレイ番号が必要な場合は次のように指定できます。
+
+```bash
+MACOS_DISPLAY=host.docker.internal:1 ./run-macos.sh
+```
+
+手動で起動する場合:
+
+```bash
+/opt/X11/bin/xhost +localhost
+mkdir -p workspace
+UID=$(id -u) GID=$(id -g) MACOS_DISPLAY=host.docker.internal:0 \
+  docker compose -f docker-compose.yml -f docker-compose.macos.yml run --rm gcoordinator
+/opt/X11/bin/xhost -localhost
+```
+
+画面が表示されない場合は、XQuartzのネットワーククライアント許可を変更した後に
+XQuartzを完全に終了して再起動したことを確認してください。
 
 ## Windows での起動
 
@@ -232,5 +278,6 @@ WSLg 方式では以下をコンテナへ渡します。
 - 軽量化のため `LIBGL_ALWAYS_SOFTWARE=0` を設定し、`/dev/dri` がある Linux ホストでは起動スクリプトが GPU/DRI デバイスをコンテナへ渡します。
 - `/dev/dri` がない環境では、GPU/DRI デバイスの受け渡しは行われません。
 - Windows では X server 側の設定により GUI が表示されない場合があります。まず VcXsrv の `Disable access control` を確認してください。
+- macOSではXQuartzを設定変更後に再起動する必要があります。Docker DesktopのコンテナからはホストのUnixソケットを直接共有せず、`host.docker.internal`を使います。
 - Windows で GPU 描画を使いたい場合は、PowerShell + VcXsrv ではなく WSLg 方式を使ってください。
 - パスに日本語や空白が含まれる場所では、WindowsとWSL間のパス変換が不安定になる場合があります。

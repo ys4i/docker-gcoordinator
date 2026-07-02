@@ -1,0 +1,7 @@
+services:
+  gcoordinator:
+    environment:
+      DISPLAY: ${MACOS_DISPLAY:-host.docker.internal:0}
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      QT_XCB_GL_INTEGRATION: xcb_glx
+      PYOPENGL_PLATFORM: glx
