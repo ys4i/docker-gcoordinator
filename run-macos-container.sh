@@ -25,7 +25,7 @@ while [ ! -S /tmp/.X11-unix/X99 ]; do
     sleep 0.1
 done
 
-x11vnc -storepasswd "$VNC_PASSWORD" /tmp/vnc.pass >/dev/null
+x11vnc -storepasswd "$VNC_PASSWORD" /tmp/vnc.pass >/dev/null 2>&1
 chmod 600 /tmp/vnc.pass
 
 x11vnc -display :99 -forever -shared -rfbauth /tmp/vnc.pass -rfbport 5900 \

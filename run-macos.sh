@@ -88,11 +88,14 @@ trap cleanup EXIT INT TERM
 echo "Waiting for the VNC display on port $MACOS_VNC_PORT..."
 VNC_READY=0
 for _ in {1..120}; do
-  if nc -z 127.0.0.1 "$MACOS_VNC_PORT" >/dev/null 2>&1; then
+  if docker exec "$CONTAINER_ID" \
+      sh -c 'pgrep -x x11vnc >/dev/null && grep -q "^PORT=5900$" /tmp/x11vnc.log' \
+      >/dev/null 2>&1 &&
+    nc -z 127.0.0.1 "$MACOS_VNC_PORT" >/dev/null 2>&1; then
     VNC_READY=1
     break
   fi
-  if ! docker inspect "$CONTAINER_ID" >/dev/null 2>&1; then
+  if [[ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER_ID" 2>/dev/null || true)" != "true" ]]; then
     break
   fi
   sleep 1
