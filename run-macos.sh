@@ -59,8 +59,25 @@ else
 fi
 
 if ! pgrep -x Xquartz >/dev/null 2>&1; then
-  echo "XQuartz is not running. Start XQuartz before running this script." >&2
-  exit 1
+  if ! open -Ra XQuartz >/dev/null 2>&1; then
+    echo "XQuartz is not installed. Run ./setup-macos.sh first." >&2
+    exit 1
+  fi
+
+  echo "Starting XQuartz..."
+  open -a XQuartz
+
+  for _ in {1..30}; do
+    if pgrep -x Xquartz >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+
+  if ! pgrep -x Xquartz >/dev/null 2>&1; then
+    echo "XQuartz did not become ready within 30 seconds." >&2
+    exit 1
+  fi
 fi
 
 XHOST_GRANTED=0
