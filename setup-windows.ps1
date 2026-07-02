@@ -314,10 +314,11 @@ function Get-OrCreateWSLUser {
         [string]$WslRepoPath
     )
 
-    $ExistingUser = (
+    $ExistingUser = [string](
         wsl --distribution $Distro --user root --exec sh -lc `
             "getent passwd | awk -F: '`$3 >= 1000 && `$3 < 65534 && `$1 ~ /^[a-z_][a-z0-9_-]*`$/ { print `$1; exit }'"
-    ).Trim()
+    )
+    $ExistingUser = $ExistingUser.Trim()
 
     if ($ExistingUser) {
         $WslUser = $ExistingUser
@@ -333,9 +334,10 @@ function Get-OrCreateWSLUser {
     }
 
     if ($SkipInstall) {
-        $CurrentUid = (
+        $CurrentUid = [string](
             wsl --distribution $Distro --exec id -u
-        ).Trim()
+        )
+        $CurrentUid = $CurrentUid.Trim()
         if ($CurrentUid -eq "0") {
             throw "The default WSL user is root. Re-run without -SkipInstall to create and configure a regular user."
         }
