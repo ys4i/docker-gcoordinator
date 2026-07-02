@@ -22,7 +22,11 @@ function Invoke-RequiredNative {
 }
 
 function Get-WSLRepoPath {
-    $WslPath = (& wsl --exec wslpath -a $ScriptDir).Trim()
+    $WslPathOutput = @(& wsl --exec wslpath -a $ScriptDir)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not convert repository path '$ScriptDir' to a WSL path."
+    }
+    $WslPath = ($WslPathOutput -join "").Trim()
     if (-not $WslPath) {
         throw "Could not convert repository path to a WSL path."
     }
@@ -34,13 +38,15 @@ if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) {
 }
 
 $WslRepoPath = Get-WSLRepoPath
-$CommonPrefix = "cd '$WslRepoPath' && if ! docker info >/dev/null 2>&1; then sudo -n service docker start; fi"
+$CommonPrefix = "if ! docker info >/dev/null 2>&1; then sudo -n service docker start; fi"
 
 if ($Mode -eq "WSLg") {
     Write-Host "Starting the application with WSLg and Docker Engine in WSL..."
     Invoke-RequiredNative `
         -Command "wsl" `
         -Arguments @(
+            "--cd",
+            $WslRepoPath,
             "--exec",
             "bash",
             "-lc",
@@ -53,6 +59,8 @@ else {
     Invoke-RequiredNative `
         -Command "wsl" `
         -Arguments @(
+            "--cd",
+            $WslRepoPath,
             "--exec",
             "bash",
             "-lc",

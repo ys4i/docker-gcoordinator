@@ -83,7 +83,24 @@ if pgrep -x Xquartz >/dev/null 2>&1; then
 fi
 
 if pgrep -x Xquartz >/dev/null 2>&1; then
-  echo "XQuartz did not exit. Close it and run this script again." >&2
+  echo "XQuartz did not exit normally. Stopping it..."
+  pkill -TERM -x Xquartz >/dev/null 2>&1 || true
+  for _ in {1..10}; do
+    if ! pgrep -x Xquartz >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+fi
+
+if pgrep -x Xquartz >/dev/null 2>&1; then
+  echo "Forcing the old XQuartz process to stop..."
+  pkill -KILL -x Xquartz >/dev/null 2>&1 || true
+  sleep 1
+fi
+
+if pgrep -x Xquartz >/dev/null 2>&1; then
+  echo "Could not stop the old XQuartz process." >&2
   exit 1
 fi
 
@@ -99,17 +116,19 @@ fi
 
 echo "Waiting for Docker Desktop to become ready..."
 DOCKER_READY=0
-for _ in {1..120}; do
+for attempt in {1..600}; do
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     DOCKER_READY=1
     break
+  fi
+  if (( attempt % 30 == 0 )); then
+    echo "Still waiting for Docker Desktop. Complete any first-run dialog if one is open..."
   fi
   sleep 1
 done
 
 if [[ "$DOCKER_READY" != "1" ]]; then
-  echo "Docker Desktop was installed and started, but is not ready yet." >&2
-  echo "Complete any first-run dialogs in Docker Desktop, then run this script again." >&2
+  echo "Docker Desktop did not become ready within 10 minutes." >&2
   exit 1
 fi
 

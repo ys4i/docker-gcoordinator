@@ -3,7 +3,6 @@ set -euo pipefail
 
 ACTION="${1:-}"
 WSL_USER="${2:-}"
-SUDOERS_FILE="/etc/sudoers.d/docker-gcoordinator-setup"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "This helper must be run as root by setup-windows.ps1." >&2
@@ -22,9 +21,8 @@ case "$ACTION" in
       useradd --create-home --shell /bin/bash "$WSL_USER"
     fi
 
-    usermod -aG sudo "$WSL_USER"
-
     WSL_CONF_TMP="$(mktemp)"
+    trap 'rm -f "${WSL_CONF_TMP:-}"' EXIT
     WSL_CONF_SOURCE="/etc/wsl.conf"
     if [[ ! -f "$WSL_CONF_SOURCE" ]]; then
       WSL_CONF_SOURCE="/dev/null"
@@ -68,15 +66,11 @@ case "$ACTION" in
     ' "$WSL_CONF_SOURCE" >"$WSL_CONF_TMP"
     install -m 0644 "$WSL_CONF_TMP" /etc/wsl.conf
     rm -f "$WSL_CONF_TMP"
+    trap - EXIT
 
-    printf '%s ALL=(root) NOPASSWD: ALL\n' "$WSL_USER" >"$SUDOERS_FILE"
-    chmod 0440 "$SUDOERS_FILE"
-    ;;
-  cleanup)
-    rm -f "$SUDOERS_FILE"
     ;;
   *)
-    echo "Usage: $0 prepare|cleanup USER" >&2
+    echo "Usage: $0 prepare USER" >&2
     exit 2
     ;;
 esac

@@ -139,6 +139,9 @@ PowerShell で以下を実行します。
 
 この1コマンドで、WSLユーザー設定、Docker EngineとVcXsrvの導入、
 Dockerイメージの作成、g-coordinatorの起動まで実行します。
+Windows機能の有効化後にOS再起動が必須となる場合を除き、途中で同じコマンドを
+再実行する必要はありません。再起動が必要な場合は再開処理が登録され、
+Windowsへ再ログインした後にセットアップが自動的に続行されます。
 
 PowerShell の実行ポリシーで `.ps1` の実行が止まる場合は、現在の PowerShell プロセスだけ一時的に許可します。
 
@@ -161,7 +164,8 @@ powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1 -Mode VcXsrv
 
 セットアップはWSL2 Ubuntu内へDocker EngineとDocker Compose pluginを導入します。
 WSLの既定ユーザーがrootの場合は、Windowsのユーザー名を基に一般ユーザーを作成して
-既定ユーザーへ設定します。Docker導入に使う一時的な管理者権限は導入後に削除されます。
+既定ユーザーへ設定します。Docker導入処理はWSLのrootユーザーで実行し、
+作成した一般ユーザーへ広範囲なパスワードなし管理者権限は付与しません。
 Docker Desktopは使用しません。`winget` が使える環境ではVcXsrvの導入を試みます。
 インストールを行わず確認とビルドだけ行う場合:
 
