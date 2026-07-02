@@ -207,10 +207,10 @@ New-Item -ItemType Directory -Force -Path log | Out-Null
 手動で起動する場合はWSL内でWindowsホストのIPアドレスを`DISPLAY`へ設定します。
 
 ```bash
-WINDOWS_HOST=$(awk '/^nameserver / { print $2; exit }' /etc/resolv.conf)
+WINDOWS_HOST=$(ip route show default | awk '{ print $3; exit }')
 export DISPLAY="${WINDOWS_HOST}:0.0"
 UID=$(id -u) GID=$(id -g) \
-docker compose -f docker-compose.yml -f docker-compose.windows.yml run --rm gcoordinator
+  docker compose -f docker-compose.yml -f docker-compose.windows.yml run --rm gcoordinator
 ```
 
 Windows では `/dev/dri` を使った GPU/DRI デバイス渡しは行いません。

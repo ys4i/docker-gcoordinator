@@ -123,10 +123,19 @@ function Ensure-VcXsrv {
         throw "VcXsrv was not found. Install it manually or use -Mode WSLg."
     }
 
+    $ExistingVcXsrv = Get-Process vcxsrv -ErrorAction SilentlyContinue
+    if ($ExistingVcXsrv) {
+        Write-Host "Restarting VcXsrv with the required settings..."
+        $ExistingVcXsrv | Stop-Process -Force
+        Start-Sleep -Seconds 1
+    }
+
+    Write-Host "Starting VcXsrv on display :0..."
+    Start-Process $VcXsrv -ArgumentList ":0 -multiwindow -clipboard -ac -listen tcp -wgl"
+    Start-Sleep -Seconds 2
+
     if (-not (Get-Process vcxsrv -ErrorAction SilentlyContinue)) {
-        Write-Host "Starting VcXsrv on display :0..."
-        Start-Process $VcXsrv -ArgumentList ":0 -multiwindow -clipboard -ac -wgl"
-        Start-Sleep -Seconds 2
+        throw "VcXsrv exited immediately after startup."
     }
 }
 

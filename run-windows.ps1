@@ -38,7 +38,7 @@ if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) {
 }
 
 $WslRepoPath = Get-WSLRepoPath
-$CommonPrefix = "if ! docker info >/dev/null 2>&1; then sudo -n service docker start; fi"
+$CommonPrefix = "if ! docker info >/dev/null 2>&1; then sudo -n /usr/sbin/service docker start; fi"
 
 if ($Mode -eq "WSLg") {
     Write-Host "Starting the application with WSLg and Docker Engine in WSL..."
@@ -64,7 +64,7 @@ else {
             "--exec",
             "bash",
             "-lc",
-            "$CommonPrefix && WINDOWS_HOST=`$(awk '/^nameserver / { print `$2; exit }' /etc/resolv.conf) && test -n `"`$WINDOWS_HOST`" && export DISPLAY=`"`$WINDOWS_HOST`:0.0`" && echo `"DISPLAY=`$DISPLAY`" && env UID=`$(id -u) GID=`$(id -g) docker compose -f docker-compose.yml -f docker-compose.windows.yml run --rm gcoordinator"
+            "sed -i 's/\r$//' run-vcxsrv.sh && chmod +x run-vcxsrv.sh && ./run-vcxsrv.sh"
         ) `
-        -ErrorMessage "VcXsrv application startup failed. Verify that VcXsrv is running with access control disabled."
+        -ErrorMessage "VcXsrv application startup failed. Review the specific error above."
 }
