@@ -69,6 +69,7 @@ fi
 
 echo "Enabling XQuartz network client connections..."
 defaults write org.xquartz.X11 nolisten_tcp -bool false
+defaults write org.xquartz.X11 enable_iglx -bool true
 
 # Apply the preference to a new XQuartz process. The normal quit request is
 # attempted first so existing X11 clients can shut down cleanly.
