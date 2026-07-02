@@ -72,8 +72,17 @@ Docker Desktopと[XQuartz](https://www.xquartz.org/)のインストール、XQua
 `Allow connections from network clients`設定、両アプリケーションの起動を
 次のスクリプトで自動化できます。
 
+Finderから`start-gcoordinator-macos.command`をダブルクリックすると、
+必要なセットアップ、Dockerイメージの作成、g-coordinatorの起動まで自動実行します。
+
 ```bash
 ./setup-macos.sh
+```
+
+このコマンドも同様にセットアップから起動まで実行します。セットアップだけを行う場合:
+
+```bash
+./setup-macos.sh --no-launch
 ```
 
 Homebrewが未導入の場合は、公式インストーラーを使ってHomebrewも導入します。

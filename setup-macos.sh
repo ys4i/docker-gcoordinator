@@ -4,6 +4,26 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+NO_BUILD=0
+NO_LAUNCH=0
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --no-build)
+      NO_BUILD=1
+      ;;
+    --no-launch)
+      NO_LAUNCH=1
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      echo "Usage: $0 [--no-build] [--no-launch]" >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "This script must be run on macOS." >&2
   exit 1
@@ -72,17 +92,45 @@ open -a XQuartz
 echo "Starting Docker Desktop..."
 open -a Docker
 
+if ! command -v docker >/dev/null 2>&1 &&
+  [[ -x /Applications/Docker.app/Contents/Resources/bin/docker ]]; then
+  export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
+fi
+
 echo "Waiting for Docker Desktop to become ready..."
+DOCKER_READY=0
 for _ in {1..120}; do
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    mkdir -p workspace
-    echo "macOS setup completed."
-    echo "Run: ./run-macos.sh"
-    exit 0
+    DOCKER_READY=1
+    break
   fi
   sleep 1
 done
 
-echo "Docker Desktop was installed and started, but is not ready yet." >&2
-echo "Complete any first-run dialogs in Docker Desktop, then run ./run-macos.sh." >&2
-exit 1
+if [[ "$DOCKER_READY" != "1" ]]; then
+  echo "Docker Desktop was installed and started, but is not ready yet." >&2
+  echo "Complete any first-run dialogs in Docker Desktop, then run this script again." >&2
+  exit 1
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+  echo "docker compose is not available. Update Docker Desktop." >&2
+  exit 1
+fi
+
+mkdir -p workspace log
+
+if [[ "$NO_BUILD" != "1" ]]; then
+  echo "Building the g-coordinator Docker image..."
+  docker compose -f docker-compose.yml -f docker-compose.macos.yml build
+fi
+
+echo "macOS setup completed."
+
+if [[ "$NO_LAUNCH" == "1" ]]; then
+  echo "Run: ./run-macos.sh"
+  exit 0
+fi
+
+echo "Launching g-coordinator..."
+exec ./run-macos.sh
