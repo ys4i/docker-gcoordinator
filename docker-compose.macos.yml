@@ -4,6 +4,7 @@ services:
     environment:
       DISPLAY: :99
       LIBGL_ALWAYS_SOFTWARE: "1"
+      VNC_PASSWORD: ${MACOS_VNC_PASSWORD:-gcoord01}
       QT_XCB_GL_INTEGRATION: xcb_glx
       PYOPENGL_PLATFORM: glx
     command: ["/usr/local/bin/run-macos-container"]

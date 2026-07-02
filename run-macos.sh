@@ -70,10 +70,13 @@ else
 fi
 
 export MACOS_VNC_PORT
+export MACOS_VNC_PASSWORD="${MACOS_VNC_PASSWORD:-$(openssl rand -hex 4)}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.macos.yml)
 
 CONTAINER_ID="$(
-  env UID="$(id -u)" GID="$(id -g)" MACOS_VNC_PORT="$MACOS_VNC_PORT" \
+  env UID="$(id -u)" GID="$(id -g)" \
+    MACOS_VNC_PORT="$MACOS_VNC_PORT" \
+    MACOS_VNC_PASSWORD="$MACOS_VNC_PASSWORD" \
     docker compose "${COMPOSE_FILES[@]}" run --rm --detach --service-ports gcoordinator
 )"
 
@@ -101,6 +104,8 @@ if [[ "$VNC_READY" != "1" ]]; then
   exit 1
 fi
 
+printf '%s' "$MACOS_VNC_PASSWORD" | pbcopy
+echo "VNC password copied to the clipboard: $MACOS_VNC_PASSWORD"
 echo "Opening macOS Screen Sharing..."
 open "vnc://127.0.0.1:$MACOS_VNC_PORT"
 docker logs --follow "$CONTAINER_ID"
