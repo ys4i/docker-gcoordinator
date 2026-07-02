@@ -3,7 +3,8 @@ param(
     [string]$Mode = "VcXsrv",
     [switch]$SkipInstall,
     [switch]$NoBuild,
-    [switch]$Launch
+    [switch]$Launch,
+    [switch]$NoLaunch
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,6 +13,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ScriptDir
 
 $SetupProgressId = 1
+$ShouldLaunch = $Launch -or -not $NoLaunch
 
 function Write-SetupProgress {
     param(
@@ -306,23 +308,94 @@ function Get-WSLRepoPath {
     return $WslPath
 }
 
+function Get-OrCreateWSLUser {
+    param(
+        [string]$Distro,
+        [string]$WslRepoPath
+    )
+
+    $ExistingUser = (
+        wsl --distribution $Distro --user root --exec sh -lc `
+            "getent passwd | awk -F: '`$3 >= 1000 && `$3 < 65534 && `$1 ~ /^[a-z_][a-z0-9_-]*`$/ { print `$1; exit }'"
+    ).Trim()
+
+    if ($ExistingUser) {
+        $WslUser = $ExistingUser
+        Write-Host "Using existing WSL user '$WslUser'."
+    }
+    else {
+        $WindowsUserName = [string]$env:USERNAME
+        $WslUser = $WindowsUserName.ToLowerInvariant() -replace '[^a-z0-9_-]', ''
+        if (-not $WslUser -or $WslUser -notmatch '^[a-z_]') {
+            $WslUser = "gcoordinator"
+        }
+        Write-Host "No regular WSL user was found. Creating '$WslUser'..."
+    }
+
+    if ($SkipInstall) {
+        $CurrentUid = (
+            wsl --distribution $Distro --exec id -u
+        ).Trim()
+        if ($CurrentUid -eq "0") {
+            throw "The default WSL user is root. Re-run without -SkipInstall to create and configure a regular user."
+        }
+        return $WslUser
+    }
+
+    Invoke-RequiredNative `
+        -Command "wsl" `
+        -Arguments @(
+            "--distribution", $Distro,
+            "--user", "root",
+            "--exec", "bash", "-lc",
+            "cd '$WslRepoPath' && sed -i 's/\r$//' setup-wsl-user.sh && bash ./setup-wsl-user.sh prepare '$WslUser'"
+        ) `
+        -ErrorMessage "Could not create or configure the regular WSL user '$WslUser'."
+
+    return $WslUser
+}
+
+function Restart-WSLDistroForDefaultUser {
+    param([string]$Distro)
+
+    if (-not $SkipInstall) {
+        Write-Host "Restarting WSL distribution to activate the default user..."
+        Invoke-RequiredNative `
+            -Command "wsl" `
+            -Arguments @("--terminate", $Distro) `
+            -ErrorMessage "Could not restart WSL distribution '$Distro'. Run 'wsl --shutdown', then retry."
+    }
+}
+
 function Ensure-WSLDockerEngine {
-    param([string]$WslRepoPath)
+    param(
+        [string]$Distro,
+        [string]$WslUser,
+        [string]$WslRepoPath
+    )
 
     if ($SkipInstall) {
         Write-Host "Checking Docker Engine inside WSL Ubuntu..."
         Invoke-RequiredNative `
             -Command "wsl" `
-            -Arguments @("--exec", "bash", "-lc", "docker info >/dev/null 2>&1 && docker compose version >/dev/null 2>&1") `
+            -Arguments @("--distribution", $Distro, "--user", $WslUser, "--exec", "bash", "-lc", "docker info >/dev/null 2>&1 && docker compose version >/dev/null 2>&1") `
             -ErrorMessage "Docker Engine or Docker Compose is not ready inside WSL. Re-run without -SkipInstall to install it."
         return
     }
 
     Write-Host "Installing or checking Docker Engine inside WSL Ubuntu..."
-    Invoke-RequiredNative `
-        -Command "wsl" `
-        -Arguments @("--exec", "bash", "-lc", "cd '$WslRepoPath' && sed -i 's/\r$//' setup-wsl-docker.sh && chmod +x setup-wsl-docker.sh && ./setup-wsl-docker.sh") `
-        -ErrorMessage "Docker Engine setup inside WSL failed. Review the error above, then re-run this script."
+    wsl --distribution $Distro --user $WslUser --exec bash -lc `
+        "cd '$WslRepoPath' && sed -i 's/\r$//' setup-wsl-docker.sh && chmod +x setup-wsl-docker.sh && ./setup-wsl-docker.sh"
+    $DockerSetupExitCode = $LASTEXITCODE
+
+    wsl --distribution $Distro --user root --exec bash -lc `
+        "cd '$WslRepoPath' && bash ./setup-wsl-user.sh cleanup '$WslUser'"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Docker setup permission cleanup failed inside WSL."
+    }
+    if ($DockerSetupExitCode -ne 0) {
+        throw "Docker Engine setup inside WSL failed. Review the error above, then re-run this script."
+    }
 }
 
 try {
@@ -335,9 +408,13 @@ try {
 
     Write-SetupProgress -Percent 20 -Status "Resolving the repository path in WSL"
     $WslRepoPath = Get-WSLRepoPath
+    $WslDistro = Get-DefaultWslDistro
+
+    Write-SetupProgress -Percent 25 -Status "Configuring a regular WSL user"
+    $WslUser = Get-OrCreateWSLUser -Distro $WslDistro -WslRepoPath $WslRepoPath
 
     Write-SetupProgress -Percent 30 -Status "Installing Docker Engine in WSL Ubuntu"
-    Ensure-WSLDockerEngine -WslRepoPath $WslRepoPath
+    Ensure-WSLDockerEngine -Distro $WslDistro -WslUser $WslUser -WslRepoPath $WslRepoPath
 
     if ($Mode -eq "VcXsrv") {
         Write-SetupProgress -Percent 40 -Status "Checking VcXsrv"
@@ -349,18 +426,19 @@ try {
             Write-SetupProgress -Percent 70 -Status "Building Docker images in WSL (this may take several minutes)"
             Invoke-RequiredNative `
                 -Command "wsl" `
-                -Arguments @("--exec", "bash", "-lc", "cd '$WslRepoPath' && docker compose -f docker-compose.yml -f docker-compose.windows.yml build") `
+                -Arguments @("--distribution", $WslDistro, "--user", $WslUser, "--exec", "bash", "-lc", "cd '$WslRepoPath' && docker compose -f docker-compose.yml -f docker-compose.windows.yml build") `
                 -ErrorMessage "Docker image build failed. Fix the build error above, then re-run this script."
         }
         else {
             Write-SetupProgress -Percent 90 -Status "Skipping Docker image build (-NoBuild)"
         }
 
+        Restart-WSLDistroForDefaultUser -Distro $WslDistro
         Write-SetupProgress -Percent 100 -Status "Setup completed"
         Write-Host "Windows VcXsrv setup completed."
         Write-Host "Run: .\run-windows.ps1"
 
-        if ($Launch) {
+        if ($ShouldLaunch) {
             Write-Host "Launching run-windows.ps1..."
             .\run-windows.ps1 -Mode VcXsrv
         }
@@ -375,18 +453,19 @@ try {
             Write-SetupProgress -Percent 70 -Status "Building Docker images in WSL (this may take several minutes)"
             Invoke-RequiredNative `
                 -Command "wsl" `
-                -Arguments @("--exec", "bash", "-lc", "cd '$WslRepoPath' && docker compose -f docker-compose.yml -f docker-compose.wslg.yml build") `
+                -Arguments @("--distribution", $WslDistro, "--user", $WslUser, "--exec", "bash", "-lc", "cd '$WslRepoPath' && docker compose -f docker-compose.yml -f docker-compose.wslg.yml build") `
                 -ErrorMessage "WSLg Docker image build failed. Fix the build error above, then re-run this script."
         }
         else {
             Write-SetupProgress -Percent 90 -Status "Skipping Docker image build (-NoBuild)"
         }
 
+        Restart-WSLDistroForDefaultUser -Distro $WslDistro
         Write-SetupProgress -Percent 100 -Status "Setup completed"
         Write-Host "Windows WSLg setup checks completed."
         Write-Host "Open this repository inside WSL and run: ./run-wslg.sh"
 
-        if ($Launch) {
+        if ($ShouldLaunch) {
             Write-Host "Launching run-wslg.sh..."
             wsl --exec sh -lc "cd '$WslRepoPath' && ./run-wslg.sh"
         }
